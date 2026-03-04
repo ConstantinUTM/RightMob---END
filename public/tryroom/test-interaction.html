@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Canvas Interaction</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #testCanvas {
+            border: 2px solid #c19a6b;
+            background: #1a1a1a;
+            cursor: grab;
+            touch-action: none;
+            display: block;
+            margin: 20px auto;
+        }
+        #testCanvas:active {
+            cursor: grabbing;
+        }
+        .info {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px auto;
+            max-width: 600px;
+        }
+        .status {
+            color: #c19a6b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Test Canvas Interaction</h1>
+    
+    <div class="info">
+        <div>Status: <span class="status" id="status">Waiting for interaction...</span></div>
+        <div>Mouse Position: <span id="mousePos">-</span></div>
+        <div>Touch Count: <span id="touchCount">0</span></div>
+        <div>Event Type: <span id="eventType">-</span></div>
+    </div>
+
+    <canvas id="testCanvas" width="600" height="400"></canvas>
+
+    <div class="info">
+        <h3>Test Instructions:</h3>
+        <ul>
+            <li><strong>Desktop:</strong> Click and drag the red square</li>
+            <li><strong>Mobile:</strong> Touch and drag the red square</li>
+            <li>Watch the console (F12) for detailed logs</li>
+        </ul>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('testCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        const mousePosEl = document.getElementById('mousePos');
+        const touchCountEl = document.getElementById('touchCount');
+        const eventTypeEl = document.getElementById('eventType');
+
+        // Simple draggable object
+        const obj = {
+            x: 300,
+            y: 200,
+            size: 80,
+            isDragging: false,
+            dragOffset: { x: 0, y: 0 }
+        };
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw object
+            ctx.fillStyle = '#c19a6b';
+            ctx.fillRect(obj.x - obj.size/2, obj.y - obj.size/2, obj.size, obj.size);
+            
+            // Draw border if dragging
+            if (obj.isDragging) {
+                ctx.strokeStyle = '#d4b088';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(obj.x - obj.size/2, obj.y - obj.size/2, obj.size, obj.size);
+            }
+            
+            // Draw center point
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(obj.x, obj.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function isInside(x, y) {
+            return Math.abs(x - obj.x) <= obj.size/2 && 
+                   Math.abs(y - obj.y) <= obj.size/2;
+        }
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            return { x, y };
+        }
+
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => {
+            console.log('🖱️ Mouse Down');
+            const { x, y } = getCanvasCoords(e);
+            
+            if (isInside(x, y)) {
+                obj.isDragging = true;
+                obj.dragOffset.x = x - obj.x;
+                obj.dragOffset.y = y - obj.y;
+                statusEl.textContent = 'Dragging!';
+                eventTypeEl.textContent = 'mousedown';
+                console.log('✅ Started dragging at', x, y);
+            }
+            draw();
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const { x, y } = getCanvasCoords(e);
+            mousePosEl.textContent = `${Math.round(x)}, ${Math.round(y)}`;
+            
+            if (obj.isDragging) {
+                obj.x = x - obj.dragOffset.x;
+                obj.y = y - obj.dragOffset.y;
+                console.log('🔄 Moving to', obj.x, obj.y);
+                draw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            console.log('🖱️ Mouse Up');
+            if (obj.isDragging) {
+                obj.isDragging = false;
+                statusEl.textContent = 'Released';
+                eventTypeEl.textContent = 'mouseup';
+                console.log('✅ Stopped dragging');
+                draw();
+            }
+        });
+
+        // Touch events
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            console.log('👆 Touch Start, touches:', e.touches.length);
+            touchCountEl.textContent = e.touches.length;
+            
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                
+                if (isInside(x, y)) {
+                    obj.isDragging = true;
+                    obj.dragOffset.x = x - obj.x;
+                    obj.dragOffset.y = y - obj.y;
+                    statusEl.textContent = 'Touch Dragging!';
+                    eventTypeEl.textContent = 'touchstart';
+                    console.log('✅ Started touch dragging at', x, y);
+                }
+                draw();
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            console.log('👆 Touch Move');
+            
+            if (e.touches.length === 1 && obj.isDragging) {
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                
+                obj.x = x - obj.dragOffset.x;
+                obj.y = y - obj.dragOffset.y;
+                mousePosEl.textContent = `${Math.round(x)}, ${Math.round(y)}`;
+                console.log('🔄 Touch moving to', obj.x, obj.y);
+                draw();
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            console.log('👆 Touch End');
+            touchCountEl.textContent = e.touches.length;
+            
+            if (e.touches.length === 0 && obj.isDragging) {
+                obj.isDragging = false;
+                statusEl.textContent = 'Touch Released';
+                eventTypeEl.textContent = 'touchend';
+                console.log('✅ Stopped touch dragging');
+                draw();
+            }
+        }, { passive: false });
+
+        // Initial draw
+        draw();
+        console.log('🎨 Canvas test ready!');
+        console.log('Canvas size:', canvas.width, 'x', canvas.height);
+    </script>
+</body>
+</html>

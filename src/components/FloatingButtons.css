@@ -1,0 +1,242 @@
+.floating-buttons-container {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .floating-buttons-container {
+    bottom: 24px;
+    right: 24px;
+    gap: 20px;
+  }
+}
+
+.bloom-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.bloom-button .bloom-container {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: none;
+  background: none;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Glass mai bogat, nu palid – tranziție la hover întunecare discretă */
+.bloom-button .bloom-container .button-container-main {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.2));
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.55) 0%, rgba(220, 38, 38, 0.5) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.bloom-button .bloom-container:hover .button-container-main {
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.3)) brightness(0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+.bloom-button .bloom-container .button-container-main .button-inner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s ease;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.12) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset -2px 2px 8px rgba(0, 0, 0, 0.12), inset 2px -2px 8px rgba(255, 255, 255, 0.25);
+}
+
+/* Culori mai saturate, glass vizibil */
+.bloom-button.whatsapp-bloom .button-container-main {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%),
+              radial-gradient(circle at 30% 30%, rgba(72, 207, 93, 0.7) 0%, rgba(22, 163, 74, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.bloom-button.whatsapp-bloom .button-inner {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(134, 239, 172, 0.3) 100%);
+}
+
+.bloom-button.viber-bloom .button-container-main {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%),
+              radial-gradient(circle at 30% 30%, rgba(167, 139, 250, 0.7) 0%, rgba(124, 58, 237, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.bloom-button.viber-bloom .button-inner {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(196, 181, 253, 0.3) 100%);
+}
+
+.bloom-button.instagram-bloom .button-container-main {
+  background: linear-gradient(135deg, rgba(251, 113, 133, 0.65) 0%, rgba(251, 146, 60, 0.65) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.bloom-button.instagram-bloom .button-inner {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(254, 205, 211, 0.25) 100%);
+}
+
+.bloom-button.facebook-bloom .button-container-main {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.65) 0%, rgba(99, 102, 241, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.bloom-button.facebook-bloom .button-inner {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(191, 219, 254, 0.2) 100%);
+}
+
+.bloom-button.gmail-bloom .button-container-main {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.6) 0%, rgba(220, 38, 38, 0.7) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.bloom-button.gmail-bloom .button-inner {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(254, 202, 202, 0.25) 100%);
+}
+
+/* SVG Icon */
+.bloom-button .bloom-container .button-container-main .button-inner .svg {
+  fill: #ffffff;
+  width: 24px;
+  height: 24px;
+  position: relative;
+  z-index: 3;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
+  opacity: 0.95;
+  transition: all 0.3s ease-in;
+}
+
+/* Glass Reflection Effect */
+.bloom-button .bloom-container .button-container-main::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.3) 25%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+  transition: all 0.3s ease-in;
+}
+
+/* Bloom Particles - mai blurat, cercuri mai mici */
+.bloom-button .bloom-container .bloom {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
+  opacity: 0;
+  transition: opacity 0.3s ease-in;
+  filter: blur(6px);
+}
+
+.bloom-button .bloom-container .bloom1 {
+  width: 14px;
+  height: 14px;
+  top: 2px;
+  right: 2px;
+  box-shadow: 0 0 24px 12px rgba(255, 255, 255, 0.5);
+  filter: blur(8px);
+}
+
+.bloom-button .bloom-container .bloom2 {
+  width: 10px;
+  height: 10px;
+  bottom: 4px;
+  left: 4px;
+  box-shadow: 0 0 18px 10px rgba(255, 255, 255, 0.35);
+  filter: blur(6px);
+}
+
+/* Hover: ușor scale, întunecare discretă (brightness deja pe .button-container-main) */
+.bloom-button .bloom-container:hover {
+  transform: scale(1.08) translateY(-3px);
+}
+
+.bloom-button .bloom-container:hover .bloom {
+  opacity: 0.7;
+}
+
+.bloom-button .bloom-container:hover .button-inner {
+  box-shadow: inset -2px 2px 10px rgba(0, 0, 0, 0.2), inset 2px -2px 10px rgba(255, 255, 255, 0.2);
+}
+
+.bloom-button .bloom-container:hover .svg {
+  opacity: 1;
+}
+
+.bloom-button .bloom-container:hover::before {
+  opacity: 0.6;
+}
+
+/* Active/Click States */
+.bloom-button .bloom-container:active {
+  transform: scale(0.92);
+}
+
+.bloom-button .bloom-container:active .button-inner {
+  transform: scale(0.95);
+}
+
+/* Mobile Responsive - cercuri mici și pe mobil */
+@media (max-width: 768px) {
+  .bloom-button .bloom-container {
+    width: 50px;
+    height: 50px;
+  }
+
+  .bloom-button .bloom-container .button-container-main {
+    width: 50px;
+    height: 50px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.22));
+  }
+
+  .bloom-button .bloom-container .button-container-main .button-inner {
+    width: 42px;
+    height: 42px;
+  }
+
+  .bloom-button .bloom-container .button-container-main .button-inner .svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .bloom-button .bloom-container .bloom1 {
+    width: 12px;
+    height: 12px;
+  }
+
+  .bloom-button .bloom-container .bloom2 {
+    width: 8px;
+    height: 8px;
+  }
+}

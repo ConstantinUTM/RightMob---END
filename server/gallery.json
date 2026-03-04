@@ -1,0 +1,488 @@
+[
+  {
+    "id": "1772136202579rdxkgc",
+    "filename": "1772136202561-Photo__93_of_95_.jpg",
+    "url": "/uploads/birou/regitratura/1772136202561-Photo__93_of_95_.jpg",
+    "category": "birou",
+    "description": "Regitratura",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": false,
+    "details": [
+      {
+        "title": "Țara de origine",
+        "text": "sa",
+        "text_en": "7.",
+        "text_ru": "Седло",
+        "images": []
+      },
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/birou/regitratura/1772136202562-Photo__92_of_95_.jpg",
+            "filename": "1772136202562-Photo__92_of_95_.jpg"
+          },
+          {
+            "url": "/uploads/birou/regitratura/1772136202565-Photo__94_of_95_.jpg",
+            "filename": "1772136202565-Photo__94_of_95_.jpg"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-02-26T20:03:22.579Z",
+    "visible": true
+  },
+  {
+    "id": "1772136109906as07v7",
+    "filename": "1772136109887-Photo__21_of_38_.jpg",
+    "url": "/uploads/copii/camera-copii/1772136109887-Photo__21_of_38_.jpg",
+    "category": "copii",
+    "description": "Camera copii",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": false,
+    "details": [
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/copii/camera-copii/1772136109889-Photo__17_of_38_.jpg",
+            "filename": "1772136109889-Photo__17_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/copii/camera-copii/1772136109891-Photo__18_of_38_.jpg",
+            "filename": "1772136109891-Photo__18_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/copii/camera-copii/1772136109894-Photo__19_of_38_.jpg",
+            "filename": "1772136109894-Photo__19_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/copii/camera-copii/1772136109898-Photo__20_of_38_.jpg",
+            "filename": "1772136109898-Photo__20_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/copii/camera-copii/1772136109901-Photo__22_of_38_.jpg",
+            "filename": "1772136109901-Photo__22_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/copii/camera-copii/1772136109903-Photo__23_of_38_.jpg",
+            "filename": "1772136109903-Photo__23_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/copii/camera-copii/1772136109904-Photo__24_of_38_.jpg",
+            "filename": "1772136109904-Photo__24_of_38_.jpg"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-02-26T20:01:49.906Z",
+    "visible": true
+  },
+  {
+    "id": "1772135756566zwzmgs",
+    "filename": "1772135756550-2026-02-16_20.21.59.jpg",
+    "url": "/uploads/living/living-mobila/1772135756550-2026-02-16_20.21.59.jpg",
+    "category": "living",
+    "description": "Living mobila",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": false,
+    "details": [
+      {
+        "title": "Material",
+        "text": "Lemn",
+        "text_en": "Wood",
+        "text_ru": "Дерево",
+        "images": []
+      },
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/living/living-mobila/1772135756552-2026-02-16_20.21.44.jpg",
+            "filename": "1772135756552-2026-02-16_20.21.44.jpg"
+          },
+          {
+            "url": "/uploads/living/living-mobila/1772135756553-2026-02-16_20.22.14.jpg",
+            "filename": "1772135756553-2026-02-16_20.22.14.jpg"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-02-26T19:55:56.566Z",
+    "visible": true
+  },
+  {
+    "id": "17721355222858650o7",
+    "filename": "1772135522281-photo_2025-01-20_15-23-55.jpg",
+    "url": "/uploads/birou/spatiu-comercial/1772135522281-photo_2025-01-20_15-23-55.jpg",
+    "category": "birou",
+    "description": "Spatiu comercial",
+    "aboutDescription": "",
+    "aboutDescription_ro": "Frumos",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": true,
+    "details": [
+      {
+        "title": "Țara de origine",
+        "text": "Moldova",
+        "text_en": "Moldavia",
+        "text_ru": "Молдова",
+        "images": []
+      },
+      {
+        "title": "Producător",
+        "text": "Eu",
+        "text_en": "I am",
+        "text_ru": "Я...",
+        "images": []
+      },
+      {
+        "title": "Mânere",
+        "text": "Bune",
+        "text_en": "The good",
+        "text_ru": "Хорошо",
+        "images": []
+      },
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/birou/spatiu-comercial/1772135522271-photo_2025-01-20_15-23-49.jpg",
+            "filename": "1772135522271-photo_2025-01-20_15-23-49.jpg"
+          },
+          {
+            "url": "/uploads/birou/spatiu-comercial/1772135522273-photo_2025-01-20_15-23-50.jpg",
+            "filename": "1772135522273-photo_2025-01-20_15-23-50.jpg"
+          },
+          {
+            "url": "/uploads/birou/spatiu-comercial/1772135522276-photo_2025-01-20_15-23-51.jpg",
+            "filename": "1772135522276-photo_2025-01-20_15-23-51.jpg"
+          },
+          {
+            "url": "/uploads/birou/spatiu-comercial/1772135522279-photo_2025-01-20_15-23-53.jpg",
+            "filename": "1772135522279-photo_2025-01-20_15-23-53.jpg"
+          },
+          {
+            "url": "/uploads/birou/spatiu-comercial/1772135522283-photo_2025-01-20_15-23-56.jpg",
+            "filename": "1772135522283-photo_2025-01-20_15-23-56.jpg"
+          },
+          {
+            "url": "/uploads/birou/spatiu-comercial/1772135522266-photo_2025-01-20_15-23-54.jpg",
+            "filename": "1772135522266-photo_2025-01-20_15-23-54.jpg"
+          },
+          {
+            "url": "/uploads/birou/spatiu-comercial/1772135522269-photo_2025-01-20_15-23-48.jpg",
+            "filename": "1772135522269-photo_2025-01-20_15-23-48.jpg"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-02-26T19:52:02.285Z",
+    "visible": true
+  },
+  {
+    "id": "1771536299132hx6px8",
+    "filename": "1771536299102-IMG_9859.JPG",
+    "url": "/uploads/living/liing-2026/1771536299102-IMG_9859.JPG",
+    "category": "living",
+    "description": "Mobilier test DA",
+    "isPrimary": true,
+    "details": [
+      {
+        "title": "Producător",
+        "text": "swsdesfgh",
+        "text_en": "swsdesfgh",
+        "text_ru": "swsdesfgh",
+        "images": []
+      },
+      {
+        "title": "Tip",
+        "text": "q",
+        "text_en": ".",
+        "text_ru": "Q",
+        "images": []
+      },
+      {
+        "title": "Material fațadă",
+        "text": "eqrft",
+        "text_en": "eqrft",
+        "text_ru": "eqrft",
+        "images": []
+      },
+      {
+        "title": "Blat",
+        "text": "bbbbbbbbbbbbbb",
+        "text_en": "bbbbbbbbbbbbbbbb",
+        "text_ru": "bbbbbbbbbbbbbbbbb",
+        "images": []
+      },
+      {
+        "title": "Glisiere",
+        "text": "qqqqqqqqqqqqqqqqq",
+        "text_en": "qqqqqqqqqqqqq",
+        "text_ru": "qqqqqqqqqqqqq",
+        "images": []
+      },
+      {
+        "title": "Termen de fabricare",
+        "text": "312341",
+        "text_en": "312341",
+        "text_ru": "312341",
+        "images": []
+      },
+      {
+        "title": "Proiect",
+        "text": "4232t4",
+        "text_en": "4232t4",
+        "text_ru": "4232t4",
+        "images": []
+      },
+      {
+        "title": "Materiale fațadă",
+        "text": "345t324",
+        "text_en": "345t324",
+        "text_ru": "345t324",
+        "images": []
+      },
+      {
+        "title": "Tip sertare / glisiere",
+        "text": "324354324",
+        "text_en": "324354324",
+        "text_ru": "324354324",
+        "images": []
+      },
+      {
+        "title": "Produs",
+        "text": "w2e3r4t5r323",
+        "text_en": "w2e3r4t5r323",
+        "text_ru": "w2e3r4t5r323",
+        "images": []
+      },
+      {
+        "title": "Dimensiuni",
+        "text": "LALALAAL testare cica",
+        "text_en": "LALAAL CICA testing",
+        "text_ru": "LALAAL CICA тестирование",
+        "images": []
+      },
+      {
+        "title": "Material",
+        "text": "werfgt",
+        "text_en": "werfgt",
+        "text_ru": "werfgt",
+        "images": []
+      },
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/living/liing-2026/1771536299119-Logo2.jpg",
+            "filename": "1771536299119-Logo2.jpg"
+          },
+          {
+            "url": "/uploads/living/liing-2026/1771536299117-Logo1.jpg",
+            "filename": "1771536299117-Logo1.jpg"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-02-19T21:24:59.132Z",
+    "aboutDescription": "Mobilier nou",
+    "aboutDescription_ro": "Mobilier nou, testam",
+    "aboutDescription_en": "New furniture, we test",
+    "aboutDescription_ru": "Новая мебель, тестируем"
+  },
+  {
+    "id": "1771368519332w3zkaq",
+    "filename": "1771368519329-Photo__15_of_38_.jpg",
+    "url": "/uploads/1771368519329-Photo__15_of_38_.jpg",
+    "category": "baie",
+    "description": "poza baie",
+    "isPrimary": false,
+    "details": [
+      {
+        "title": "Țara de origine",
+        "text": "wedrdgtew3q2ewrtf",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/1771368519331-Photo__16_of_38_.jpg",
+            "filename": "1771368519331-Photo__16_of_38_.jpg"
+          }
+        ]
+      },
+      {
+        "title": "Formă bucătărie",
+        "text": "defrgtrred",
+        "text_en": "",
+        "text_ru": "",
+        "images": []
+      },
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/1771368519329-Photo__15_of_38_.jpg",
+            "filename": "1771368519329-Photo__15_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/1771368519331-Photo__16_of_38_.jpg",
+            "filename": "1771368519331-Photo__16_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/1771368519323-Photo__13_of_38_.jpg",
+            "filename": "1771368519323-Photo__13_of_38_.jpg"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-02-17T22:48:39.332Z",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": ""
+  },
+  {
+    "id": "1771366598614xtao90",
+    "filename": "1771366598610-2026-02-16_20.35.51.jpg",
+    "url": "/uploads/1771366598610-2026-02-16_20.35.51.jpg",
+    "category": "bucatarie",
+    "description": "Bucatarie",
+    "isPrimary": true,
+    "details": [
+      {
+        "title": "Țara de origine",
+        "text": "eu",
+        "text_en": "me",
+        "text_ru": "Я...",
+        "images": [
+          {
+            "url": "/uploads/1771366598611-2026-02-16_20.36.04.jpg",
+            "filename": "1771366598611-2026-02-16_20.36.04.jpg"
+          },
+          {
+            "url": "/uploads/1771366598613-2026-02-16_20.36.17.jpg",
+            "filename": "1771366598613-2026-02-16_20.36.17.jpg"
+          }
+        ]
+      },
+      {
+        "title": "Material fațadă",
+        "text": "e234t5r",
+        "text_en": "e234t5r",
+        "text_ru": "e234t5r",
+        "images": []
+      },
+      {
+        "title": "Material carcasă",
+        "text": "342543",
+        "text_en": "342543",
+        "text_ru": "342543",
+        "images": []
+      },
+      {
+        "title": "Cornisă",
+        "text": "43refdcs",
+        "text_en": "43refdcs",
+        "text_ru": "43refdcs",
+        "images": []
+      },
+      {
+        "title": "",
+        "text": "",
+        "images": [
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310957-2026-02-16_20.37.38.jpg",
+            "filename": "1772136310957-2026-02-16_20.37.38.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310959-2026-02-16_20.37.56.jpg",
+            "filename": "1772136310959-2026-02-16_20.37.56.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310960-2026-02-16_20.38.08.jpg",
+            "filename": "1772136310960-2026-02-16_20.38.08.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310961-2026-02-16_20.38.19.jpg",
+            "filename": "1772136310961-2026-02-16_20.38.19.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310962-2026-02-16_20.38.35.jpg",
+            "filename": "1772136310962-2026-02-16_20.38.35.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310964-2026-02-16_20.39.41.jpg",
+            "filename": "1772136310964-2026-02-16_20.39.41.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310966-2026-02-16_20.39.45.jpg",
+            "filename": "1772136310966-2026-02-16_20.39.45.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310968-2026-02-16_20.39.53.jpg",
+            "filename": "1772136310968-2026-02-16_20.39.53.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310971-2026-02-16_20.39.58.jpg",
+            "filename": "1772136310971-2026-02-16_20.39.58.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310972-2026-02-16_20.40.03.jpg",
+            "filename": "1772136310972-2026-02-16_20.40.03.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310974-2026-02-16_20.40.09.jpg",
+            "filename": "1772136310974-2026-02-16_20.40.09.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310975-2026-02-16_20.40.13.jpg",
+            "filename": "1772136310975-2026-02-16_20.40.13.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310976-2026-02-16_20.40.18.jpg",
+            "filename": "1772136310976-2026-02-16_20.40.18.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1772136310977-2026-02-16_20.40.22.jpg",
+            "filename": "1772136310977-2026-02-16_20.40.22.jpg"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-02-17T22:16:38.614Z",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": ""
+  }
+]

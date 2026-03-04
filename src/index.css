@@ -1,0 +1,400 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-dark-950 antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+
+  .btn-primary {
+    @apply text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg shadow-md;
+    background: linear-gradient(120deg, #2563eb 0%, #dc2626 50%, #2563eb 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 6s ease infinite;
+  }
+  .btn-primary:hover {
+    animation-duration: 4s;
+  }
+
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-dark-950 font-semibold py-3 px-8 rounded-xl border-2 border-dark-200 transition-all duration-300 transform hover:scale-[1.02] shadow-sm hover:shadow-md;
+    --tw-border-opacity: 1;
+  }
+  .btn-secondary:hover {
+    border-color: #2563eb;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  /* Card cu accent logo (albastru-roșu) – bordură discretă */
+  .card-lux {
+    @apply relative rounded-2xl border border-blue-200/60 shadow-lg transition-all duration-300;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.08);
+  }
+  .card-lux:hover {
+    border-color: rgba(37, 99, 235, 0.4);
+    box-shadow: 0 8px 30px rgba(37, 99, 235, 0.12);
+  }
+
+  .gradient-overlay {
+    @apply absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent;
+  }
+
+  .btn-glass {
+    background: linear-gradient(135deg, #2563eb 0%, #dc2626 100%);
+    @apply text-white shadow-md;
+  }
+
+  .btn-glass-outline {
+    @apply bg-white/80 backdrop-blur-sm border;
+  }
+
+  /* Butoane lux: gradient roșu-albastru cu animație fade */
+  .btn-lux {
+    @apply relative overflow-hidden text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-300;
+    background: linear-gradient(120deg, #2563eb 0%, #dc2626 50%, #2563eb 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 6s ease infinite;
+  }
+  .btn-lux:hover {
+    @apply shadow-xl scale-[1.02];
+    animation-duration: 4s;
+  }
+
+  /* Card hover: bordură gradient animat (roșu-albastru) */
+  .card-lux-hover {
+    @apply relative;
+  }
+  .card-lux-hover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    background: linear-gradient(120deg, #2563eb 0%, #dc2626 50%, #2563eb 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 6s ease infinite;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+  }
+  .card-lux-hover:hover::after {
+    opacity: 1;
+  }
+
+  /* Social glass buttons – mai saturate, hover întunecare discretă */
+  .social-glass-btn {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.5) 0%, rgba(220, 38, 38, 0.45) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+  .social-glass-wa { background: linear-gradient(135deg, rgba(34, 197, 94, 0.65) 0%, rgba(22, 163, 74, 0.7) 100%); }
+  .social-glass-viber { background: linear-gradient(135deg, rgba(139, 92, 246, 0.65) 0%, rgba(124, 58, 237, 0.7) 100%); }
+  .social-glass-ig { background: linear-gradient(135deg, rgba(236, 72, 153, 0.6) 0%, rgba(249, 115, 22, 0.6) 100%); }
+  .social-glass-fb { background: linear-gradient(135deg, rgba(59, 130, 246, 0.65) 0%, rgba(99, 102, 241, 0.6) 100%); }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Login Modal Animated Dot */
+  @keyframes moveDot {
+    0%, 100% {
+      top: 10%;
+      right: 10%;
+    }
+    25% {
+      top: 10%;
+      right: calc(100% - 35px);
+    }
+    50% {
+      top: calc(100% - 30px);
+      right: calc(100% - 35px);
+    }
+    75% {
+      top: calc(100% - 30px);
+      right: 10%;
+    }
+  }
+
+  .animate-moveDot {
+    animation: moveDot 6s linear infinite;
+  }
+
+  /* Dot circling around the box with rounded corners */
+  @keyframes circleBox {
+    0% {
+      top: 0;
+      left: 20%;
+      transform: translate(-50%, -50%);
+    }
+    12.5% {
+      top: 0;
+      left: 80%;
+      transform: translate(-50%, -50%);
+    }
+    25% {
+      top: 0;
+      left: 100%;
+      transform: translate(-50%, -50%);
+    }
+    37.5% {
+      top: 50%;
+      left: 100%;
+      transform: translate(-50%, -50%);
+    }
+    50% {
+      top: 100%;
+      left: 100%;
+      transform: translate(-50%, -50%);
+    }
+    62.5% {
+      top: 100%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    75% {
+      top: 100%;
+      left: 0;
+      transform: translate(-50%, -50%);
+    }
+    87.5% {
+      top: 50%;
+      left: 0;
+      transform: translate(-50%, -50%);
+    }
+    100% {
+      top: 0;
+      left: 20%;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  .animate-circleBox {
+    animation: circleBox 12s linear infinite;
+  }
+
+  /* Social Share Button Animations */
+  .share-buttons {
+    transition: padding 0.3s;
+  }
+  
+  .share-buttons:hover {
+    padding: 60px;
+  }
+
+  .share-buttons:hover .share-button {
+    box-shadow: 5px 5px 12px rgba(251, 191, 36, 0.2), -5px -5px 12px rgba(255, 255, 255, 0.8);
+  }
+
+  .share-button {
+    box-shadow: 5px 5px 12px rgba(251, 191, 36, 0), -5px -5px 12px rgba(255, 255, 255, 0);
+  }
+
+  /* Fade in animation for success messages */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  /* Float animation for floating buttons */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* Social Icons in Header */
+  .social-icon-header {
+    @apply w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 border border-transparent;
+    @apply text-dark-600 hover:text-white;
+  }
+
+  .social-icon-header.whatsapp:hover {
+    @apply bg-[#25D366] border-[#25D366] shadow-lg shadow-[#25D366]/30;
+  }
+
+  .social-icon-header.viber:hover {
+    @apply bg-[#665CAC] border-[#665CAC] shadow-lg shadow-[#665CAC]/30;
+  }
+
+  .social-icon-header.instagram:hover {
+    @apply bg-gradient-to-br from-[#405DE6] via-[#E1306C] to-[#FFDC80] border-[#E1306C] shadow-lg shadow-[#E1306C]/30;
+  }
+
+  .social-icon-header.facebook:hover {
+    @apply bg-[#1877F2] border-[#1877F2] shadow-lg shadow-[#1877F2]/30;
+  }
+
+  /* Social Icons in Footer */
+  .social-icon-footer {
+    @apply w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300;
+    @apply text-gray-400 hover:text-white border border-gray-700 hover:border-transparent;
+  }
+
+  .social-icon-footer.whatsapp:hover {
+    @apply bg-[#25D366] border-[#25D366] shadow-lg shadow-[#25D366]/20;
+  }
+
+  .social-icon-footer.instagram:hover {
+    @apply bg-gradient-to-br from-[#405DE6] via-[#E1306C] to-[#FFDC80] border-[#E1306C] shadow-lg shadow-[#E1306C]/20;
+  }
+
+  .social-icon-footer.facebook:hover {
+    @apply bg-[#1877F2] border-[#1877F2] shadow-lg shadow-[#1877F2]/20;
+  }
+
+  /* Floating Buttons */
+  .floating-button {
+    @apply w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300;
+    @apply text-white hover:shadow-2xl;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .floating-button.whatsapp-button {
+    @apply bg-[#25D366] hover:bg-[#20BA5A];
+    box-shadow: 0 4px 14px 0 rgba(37, 211, 102, 0.4);
+  }
+
+  .floating-button.whatsapp-button:hover {
+    box-shadow: 0 6px 20px 0 rgba(37, 211, 102, 0.6);
+  }
+
+  .floating-button.viber-button {
+    @apply bg-[#665CAC] hover:bg-[#59509D];
+    box-shadow: 0 4px 14px 0 rgba(102, 92, 172, 0.4);
+  }
+
+  .floating-button.viber-button:hover {
+    box-shadow: 0 6px 20px 0 rgba(102, 92, 172, 0.6);
+  }
+
+  /* Social Cards on Contact Page */
+  .social-card {
+    @apply flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300;
+    @apply bg-white hover:bg-gradient-to-br text-dark-900 hover:text-white;
+    @apply shadow-sm hover:shadow-xl transform hover:-translate-y-1;
+  }
+
+  .social-card.whatsapp-card {
+    @apply border-[#25D366] hover:from-[#25D366] hover:to-[#20BA5A];
+  }
+
+  .social-card.whatsapp-card:hover {
+    box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3);
+  }
+
+  .social-card.viber-card {
+    @apply border-[#665CAC] hover:from-[#665CAC] hover:to-[#59509D];
+  }
+
+  .social-card.viber-card:hover {
+    box-shadow: 0 10px 30px rgba(102, 92, 172, 0.3);
+  }
+
+  .social-card.instagram-card {
+    @apply border-[#E1306C] hover:from-[#405DE6] hover:via-[#E1306C] hover:to-[#FFDC80];
+  }
+
+  .social-card.instagram-card:hover {
+    box-shadow: 0 10px 30px rgba(225, 48, 108, 0.3);
+  }
+
+  .social-card.facebook-card {
+    @apply border-[#1877F2] hover:from-[#1877F2] hover:to-[#0C5FCD];
+  }
+
+  .social-card.facebook-card:hover {
+    box-shadow: 0 10px 30px rgba(24, 119, 242, 0.3);
+  }
+
+  /* Social Icons – Contact Page: culori de brand (vizibile), la hover culorile aplicațiilor */
+  .social-contact-icon {
+    @apply flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300;
+    @apply border border-neutral-200/80 bg-white/80;
+  }
+
+  .social-contact-icon-wa {
+    color: #25D366;
+  }
+  .social-contact-icon-viber {
+    color: #665CAC;
+  }
+  .social-contact-icon-ig {
+    color: #E1306C;
+  }
+  .social-contact-icon-fb {
+    color: #1877F2;
+  }
+
+  .social-contact-icon:hover {
+    @apply border-transparent text-white shadow-lg;
+  }
+
+  .social-contact-icon-wa:hover {
+    background: linear-gradient(135deg, #25D366 0%, #20BA5A 100%);
+    box-shadow: 0 8px 24px rgba(37, 211, 102, 0.35);
+    color: #fff;
+  }
+
+  .social-contact-icon-viber:hover {
+    background: linear-gradient(135deg, #665CAC 0%, #59509D 100%);
+    box-shadow: 0 8px 24px rgba(102, 92, 172, 0.35);
+    color: #fff;
+  }
+
+  .social-contact-icon-ig:hover {
+    background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    box-shadow: 0 8px 24px rgba(225, 48, 108, 0.35);
+    color: #fff;
+  }
+
+  .social-contact-icon-fb:hover {
+    background: linear-gradient(135deg, #1877F2 0%, #0C5FCD 100%);
+    box-shadow: 0 8px 24px rgba(24, 119, 242, 0.35);
+    color: #fff;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .floating-button {
+      @apply w-12 h-12;
+      animation: float 3s ease-in-out infinite;
+    }
+  }}

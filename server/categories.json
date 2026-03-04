@@ -1,0 +1,34 @@
+[
+  {
+    "id": "living",
+    "label": "Cameră de zi"
+  },
+  {
+    "id": "dormitor",
+    "label": "Dormitor"
+  },
+  {
+    "id": "bucatarie",
+    "label": "Bucătărie"
+  },
+  {
+    "id": "birou",
+    "label": "Birou"
+  },
+  {
+    "id": "hol",
+    "label": "Hol"
+  },
+  {
+    "id": "baie",
+    "label": "Baie"
+  },
+  {
+    "id": "copii",
+    "label": "Cameră Copii"
+  },
+  {
+    "id": "gradina",
+    "label": "Grădină"
+  }
+]
