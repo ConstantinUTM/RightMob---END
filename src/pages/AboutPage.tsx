@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Plus, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getUploadsBase } from '../lib/api';
 
 const ACCENT = '#374151';
 const RED = '#dc2626';
@@ -13,20 +12,19 @@ const WARM_GREY = '#5c5c5c';
 
 const AboutPage: React.FC = () => {
   const { t } = useLanguage();
-  const base = getUploadsBase();
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const aboutImages = [
-    `${base}/uploads/living/liing-2026/1771536299102-IMG_9859.JPG`,
-    `${base}/uploads/1771368519326-Photo__14_of_38_.jpg`,
-    `${base}/uploads/1771368519329-Photo__15_of_38_.jpg`,
+    '/uploads/living/liing-2026/1771536299102-IMG_9859.JPG',
+    '/uploads/1771368519326-Photo__14_of_38_.jpg',
+    '/uploads/1771368519329-Photo__15_of_38_.jpg',
     '/images/IMG_9859.JPG',
     '/images/Logo2.jpg',
     '/images/Logo1.jpg',
   ];
-  const fallbackImages = ['/images/about/about-1.jpg', '/images/about/about-2.jpg', '/images/about/about-3.jpg', '/images/IMG_9859.JPG', '/images/Logo2.jpg'];
+  const fallbackImages = ['/images/IMG_9859.JPG', '/images/Logo2.jpg', '/images/Logo1.jpg', '/images/IMG_9859.JPG', '/images/Logo2.jpg'];
 
   const steps = [
     { key: 'step1' as const, num: '01' },
@@ -42,7 +40,7 @@ const AboutPage: React.FC = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative bg-[#0a0a0a] text-white py-14 sm:py-20 px-4 sm:px-6 overflow-hidden"
+        className="relative bg-[#0a0a0a] text-white py-10 sm:py-14 px-4 sm:px-6 overflow-hidden"
       >
         {/* Accente discrete */}
         <div className="absolute top-10 right-10 opacity-15" aria-hidden>
@@ -104,7 +102,7 @@ const AboutPage: React.FC = () => {
       </motion.section>
 
       {/* Cine suntem – bloc text mare, fundal deschis */}
-      <section className="py-20 md:py-28 px-4 sm:px-6 bg-[#FAFAF9]">
+      <section className="py-12 md:py-16 px-4 sm:px-6 bg-[#FAFAF9]">
         <div className="container-custom max-w-3xl mx-auto">
           <motion.p
             initial={{ opacity: 0, y: 16 }}
@@ -120,11 +118,11 @@ const AboutPage: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.05 }}
-            className="text-2xl md:text-3xl font-serif font-light text-neutral-900 leading-tight mb-10"
+            className="text-2xl md:text-3xl font-serif font-light text-neutral-900 leading-tight mb-6"
           >
             {t('about.customFurnitureTitle')}
           </motion.h2>
-          <div className="space-y-6 text-base md:text-lg text-neutral-600 leading-relaxed">
+          <div className="space-y-4 text-base md:text-lg text-neutral-600 leading-relaxed">
             <motion.p initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: 0.1 }}>
               {t('about.whoWeAreP1')}
             </motion.p>
@@ -144,30 +142,29 @@ const AboutPage: React.FC = () => {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="relative -mx-4 sm:mx-0 my-16 sm:my-20"
+        className="relative -mx-4 sm:mx-0 my-10 sm:my-12"
       >
         <div className="relative w-full min-h-[50vh] sm:min-h-[55vh] md:min-h-[60vh] max-h-[75vh] overflow-hidden rounded-2xl">
           <img
-            src={aboutImages[0]}
+            src="/images/IMG_9872.JPG"
             alt="Producție și montaj"
             className="absolute inset-0 w-full h-full object-cover"
             onError={(e) => {
               const el = e.target as HTMLImageElement;
-              if (el.src !== fallbackImages[0]) el.src = fallbackImages[0];
-              else if (el.src !== fallbackImages[3]) el.src = fallbackImages[3];
+              if (el.src !== '/images/IMG_9859.JPG') el.src = '/images/IMG_9859.JPG';
             }}
           />
-          {/* Gradient ușor peste tot pentru lizibilitatea cardurilor în centru */}
+          {/* Gradient pentru lizibilitate */}
           <div
             className="absolute inset-0 pointer-events-none rounded-2xl"
             style={{
-              background: 'radial-gradient(ellipse 80% 70% at 50% 50%, rgba(0,0,0,0.4) 0%, transparent 70%)',
+              background: 'linear-gradient(135deg, rgba(37,99,235,0.25) 0%, rgba(10,10,10,0.5) 50%, rgba(220,38,38,0.2) 100%)',
             }}
           />
-          {/* Cardurile Livrare & Montaj – exact în centrul pozei */}
+          {/* Cardurile Livrare & Montaj */}
           <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6 pointer-events-auto">
             <div className="flex flex-col items-center w-full max-w-2xl">
-              <p className="text-[11px] font-medium text-white/90 uppercase tracking-[0.2em] mb-4 sm:mb-5 text-center">
+              <p className="text-[11px] font-medium text-white uppercase tracking-[0.2em] mb-4 sm:mb-5 text-center">
                 • {t('about.deliveryTitle')}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full justify-items-center sm:justify-items-stretch">
@@ -180,8 +177,11 @@ const AboutPage: React.FC = () => {
                     transition={{ duration: 0.3, delay: i * 0.05 }}
                     className="flex gap-3 p-4 sm:p-5 rounded-xl bg-white/95 backdrop-blur-md border border-white/20 shadow-xl"
                   >
-                    <div className="flex shrink-0 w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${ACCENT}18` }}>
-                      <span className="text-sm font-semibold tabular-nums" style={{ color: ACCENT }}>{num}</span>
+                    <div
+                      className="flex shrink-0 w-10 h-10 rounded-lg items-center justify-center"
+                      style={{ background: i % 2 === 0 ? 'linear-gradient(135deg, #2563eb18, #2563eb10)' : 'linear-gradient(135deg, #dc262618, #dc262610)' }}
+                    >
+                      <span className="text-sm font-semibold tabular-nums" style={{ color: i % 2 === 0 ? '#2563eb' : '#dc2626' }}>{num}</span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1">
@@ -200,7 +200,7 @@ const AboutPage: React.FC = () => {
       </motion.section>
 
       {/* Misiune – citat */}
-      <section className="py-20 md:py-24 px-4 sm:px-6 bg-[#FAFAF9]">
+      <section className="py-12 md:py-16 px-4 sm:px-6 bg-[#FAFAF9]">
         <div className="container-custom max-w-3xl mx-auto">
           <motion.p
             initial={{ opacity: 0, y: 12 }}
@@ -225,8 +225,8 @@ const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* De ce să ne alegeți + imagine */}
-      <section className="py-20 md:py-28 px-4 sm:px-6 bg-white">
+      {/* De ce să ne alegeți + video */}
+      <section className="py-12 md:py-16 px-4 sm:px-6 bg-white">
         <div className="container-custom max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <motion.div
             initial={{ opacity: 0, x: -24 }}
@@ -251,23 +251,21 @@ const AboutPage: React.FC = () => {
             viewport={{ once: true }}
             className="order-1 lg:order-2 rounded-2xl overflow-hidden aspect-[4/5] min-h-[380px] sm:min-h-[440px] lg:max-h-[600px]"
           >
-            <img
-              src={aboutImages[2]}
-              alt="Mobilier personalizat"
+            <video
               className="w-full h-full object-cover"
-              onError={(e) => {
-                const el = e.target as HTMLImageElement;
-                if (el.src !== fallbackImages[2]) el.src = fallbackImages[2];
-                else if (el.src !== aboutImages[3]) el.src = aboutImages[3];
-                else el.style.display = 'none';
-              }}
+              src="/images/video/about.mp4"
+              autoPlay
+              playsInline
+              muted
+              loop
+              preload="auto"
             />
           </motion.div>
         </div>
       </section>
 
-      {/* CTA – înălțime rezonabilă */}
-      <section className="py-14 md:py-20 px-4 sm:px-6 bg-[#0a0a0a] text-white text-center overflow-x-hidden">
+      {/* CTA */}
+      <section className="py-10 md:py-14 px-4 sm:px-6 bg-[#0a0a0a] text-white text-center overflow-x-hidden">
         <motion.h2
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}

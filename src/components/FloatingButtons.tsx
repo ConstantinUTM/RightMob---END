@@ -12,8 +12,14 @@ const FloatingButtons: React.FC = () => {
   };
   const openViber = () => window.open(`viber://chat?number=%2B${viberNumber}`, '_blank');
   const openEmail = () => {
-    const subject = encodeURIComponent('Mesaj de pe site RightMob');
-    const body = encodeURIComponent('Bună ziua,\n\n');
+    const subject = encodeURIComponent('Solicitare consultație – RightMob');
+    const body = encodeURIComponent(
+      'Bună ziua,\n\n' +
+      'V-am contactat prin intermediul site-ului RightMob.\n' +
+      'Aș dori să solicit o consultație și mai multe detalii despre serviciile dumneavoastră.\n\n' +
+      'Vă mulțumesc anticipat!\n' +
+      'Cu respect,\n'
+    );
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}&su=${subject}&body=${body}`;
     window.open(gmailUrl, '_blank', 'noopener,noreferrer');
   };

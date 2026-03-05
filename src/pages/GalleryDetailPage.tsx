@@ -179,7 +179,7 @@ const GalleryDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
-      <div className="container-custom py-6 pt-20 pb-24">
+      <div className="container-custom py-6 pt-28 pb-24">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -206,25 +206,18 @@ const GalleryDetailPage: React.FC = () => {
             </h1>
           </header>
 
-          {/* Card stabil: imagine în interior, fără mișcare/scroll; calitativ atât landscape cât și portret */}
-          <div className="mb-8">
+          {/* Imagine principală – fără card, doar poza */}
+          <div className="mb-6">
             <div
-              className="relative rounded-2xl overflow-hidden bg-white border border-neutral-200/80 shadow-lg flex items-center justify-center"
-              style={{ height: 'min(70vh, 560px)' }}
+              className="relative flex items-center justify-center cursor-zoom-in"
+              style={{ minHeight: 'min(80vh, 700px)' }}
+              onClick={() => setLightboxOpen(true)}
             >
-              <div className="absolute inset-0 flex items-center justify-center p-3">
-                <img
-                  src={currentImageUrl}
-                  alt={item.description || ''}
-                  className="max-w-full max-h-full w-auto h-auto object-contain object-center block pointer-events-none select-none"
-                  draggable={false}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setLightboxOpen(true)}
-                className="absolute inset-0 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#2563eb]/30 rounded-2xl cursor-zoom-in"
-                aria-label={t('common.openFullscreen') || 'Mărire imagine'}
+              <img
+                src={currentImageUrl}
+                alt={item.description || ''}
+                className="max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-lg pointer-events-none select-none"
+                draggable={false}
               />
             </div>
 
@@ -237,7 +230,7 @@ const GalleryDetailPage: React.FC = () => {
                       key={idx}
                       type="button"
                       onClick={() => setSelectedImageIndex(idx)}
-                      className={`flex-shrink-0 w-24 sm:w-28 aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-400 ${
+                      className={`flex-shrink-0 w-20 sm:w-24 aspect-[4/3] rounded-lg overflow-hidden border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-400 ${
                         selectedImageIndex === idx
                           ? 'border-neutral-700 ring-2 ring-neutral-400/50'
                           : 'border-transparent opacity-80 hover:opacity-100'

@@ -1,8 +1,5 @@
-// Același API base ca galleryService ca să meargă și fără proxy Vite
-const getApiBaseUrl = () => {
-  if (typeof window === 'undefined') return 'http://localhost:3001';
-  return import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
-};
+import { getApiBase } from '../lib/api';
+const getApiBaseUrl = () => getApiBase();
 
 export interface Category {
   id: string;

@@ -26,6 +26,7 @@ const HomePage: React.FC = () => {
   return (
     <div className="overflow-x-hidden">
       <HeroSection />
+      <VideoSection />
       {features.tryInMyRoomEnabled && <TryRoomSection />}
       <CollectionsSection products={products} />
       <TestimonialsSection />
@@ -148,15 +149,15 @@ const HeroSection: React.FC = () => {
           className="grid grid-cols-3 gap-8 max-w-2xl mx-auto pt-16"
         >
           {[
-            { number: '500+', label: t('hero.stats.products') },
-            { number: '15', label: t('hero.stats.experience') },
-            { number: '5000+', label: t('hero.stats.happyClients') },
+            { number: '100+', label: t('hero.stats.products') },
+            { number: '7', label: t('hero.stats.experience') },
+            { number: '70+', label: t('hero.stats.happyClients') },
           ].map((stat, index) => (
-            <div key={index} className="text-white">
-              <div className="text-4xl md:text-5xl font-bold font-serif bg-gradient-to-br from-white to-blue-300 bg-clip-text text-transparent">
+            <div key={index} className="text-white text-center">
+              <div className="text-4xl md:text-5xl font-bold font-serif bg-gradient-to-br from-white to-blue-200 bg-clip-text text-transparent drop-shadow-lg">
                 {stat.number}
               </div>
-              <div className="text-sm md:text-base text-gray-300 mt-2">
+              <div className="text-xs md:text-sm text-white/70 mt-2 uppercase tracking-widest font-medium">
                 {stat.label}
               </div>
             </div>
@@ -180,6 +181,107 @@ const HeroSection: React.FC = () => {
           <motion.div className="w-1.5 h-1.5 bg-white rounded-full" />
         </motion.div>
       </motion.div>
+    </section>
+  );
+};
+
+const VideoSection: React.FC = () => {
+  const { t } = useLanguage();
+  const ref = useRef<HTMLElement>(null);
+  const isInView = useInView(ref, { once: true, margin: '-80px' });
+  return (
+    <section ref={ref} className="relative py-24 md:py-32 bg-[#FAFAF9] overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-[#2563eb]/[0.04] to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-amber-100/20 to-transparent rounded-full blur-3xl pointer-events-none" />
+
+      <div className="container-custom max-w-7xl mx-auto px-4 relative">
+        <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-12 lg:gap-20 items-center">
+          {/* Video – portrait, elegant frame */}
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="relative mx-auto lg:mx-0"
+          >
+            <div className="relative w-[300px] sm:w-[360px] lg:w-[400px]">
+              {/* Glow behind video */}
+              <div className="absolute -inset-3 bg-gradient-to-br from-[#2563eb]/10 via-transparent to-amber-200/10 rounded-3xl blur-xl pointer-events-none" />
+              {/* Gold accent line */}
+              <div className="absolute -left-3 top-8 bottom-8 w-[2px] bg-gradient-to-b from-transparent via-amber-400/40 to-transparent" />
+
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-black/[0.08] aspect-[9/16]">
+                <video
+                  ref={(el) => {
+                    if (el && isInView) el.play().catch(() => {});
+                  }}
+                  className="w-full h-full object-cover"
+                  src="/images/video/home.mp4"
+                  autoPlay
+                  muted
+                  controls
+                  playsInline
+                  loop
+                  preload="auto"
+                  poster="/images/IMG_9859.JPG"
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Text – elegant description */}
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col justify-center"
+          >
+            <h2 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-serif font-light text-[#0a0a0a] leading-[1.05] tracking-tight whitespace-pre-line mb-8">
+              {t('videoSection.title')}
+            </h2>
+
+            <div className="w-16 h-[1.5px] bg-gradient-to-r from-[#2563eb]/60 to-amber-400/40 mb-8" />
+
+            <p className="text-base lg:text-[1.1rem] text-neutral-600 leading-[1.75] max-w-xl mb-10">
+              {t('videoSection.description')}
+            </p>
+
+            {/* Luxury stats */}
+            <div className="flex gap-12 mb-12">
+              <div>
+                <p className="text-4xl lg:text-5xl font-serif font-bold text-[#0a0a0a] tracking-tight">
+                  500<span className="text-[#2563eb] font-light">+</span>
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-400 mt-2 font-medium">{t('videoSection.stat1Label')}</p>
+              </div>
+              <div className="w-px bg-gradient-to-b from-transparent via-neutral-200 to-transparent" />
+              <div>
+                <p className="text-4xl lg:text-5xl font-serif font-bold text-[#0a0a0a] tracking-tight">
+                  100<span className="text-amber-500 font-light">%</span>
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-400 mt-2 font-medium">{t('videoSection.stat2Label')}</p>
+              </div>
+            </div>
+
+            <Link
+              to="/despre"
+              className="group inline-flex items-center gap-2 text-sm font-semibold text-[#dc2626] hover:text-[#b91c1c] transition-colors"
+            >
+              {t('nav.about')}
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+
+            {/* Brand signature */}
+            <div className="mt-14 flex items-center gap-4">
+              <div className="w-10 h-px bg-neutral-300" />
+              <span className="text-[10px] uppercase tracking-[0.3em] font-semibold">
+                <span className="text-[#2563eb]">RIGHT</span><span className="text-[#dc2626]">MOB</span>
+              </span>
+              <div className="w-10 h-px bg-neutral-300" />
+            </div>
+          </motion.div>
+        </div>
+      </div>
     </section>
   );
 };
@@ -289,15 +391,6 @@ const CollectionsSection: React.FC<{ products: Product[] }> = ({ products }) => 
           transition={{ duration: 0.7 }}
           className="text-center max-w-4xl mx-auto mb-20"
         >
-          <motion.span
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={isInView ? { opacity: 1, scale: 1 } : {}}
-            transition={{ duration: 0.7 }}
-            className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-neutral-600 via-neutral-700 to-red-600 text-white rounded-full text-sm font-semibold mb-8 shadow-lg"
-          >
-            <Sparkles className="w-5 h-5" />
-            <span>{t('collections.title')}</span>
-          </motion.span>
           <h2 className="text-5xl md:text-7xl font-serif font-bold text-dark-950 mb-6 leading-tight">
             {t('collections.title')}
           </h2>
@@ -445,9 +538,6 @@ const TestimonialsSection: React.FC = () => {
           transition={{ duration: 0.6 }}
           className="text-center max-w-3xl mx-auto mb-20"
         >
-          <span className="inline-block px-6 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-6">
-            {t('testimonials.title')}
-          </span>
           <h2 className="text-5xl md:text-6xl font-serif font-bold text-dark-950 mb-6">
             {t('testimonials.title')}
           </h2>

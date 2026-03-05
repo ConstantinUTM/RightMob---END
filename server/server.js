@@ -20,6 +20,24 @@ const GALLERY_FILE = path.join(__dirname, 'gallery.json');
 const CATEGORIES_FILE = path.join(__dirname, 'categories.json');
 const ANALYTICS_FILE = path.join(__dirname, 'analytics.json');
 const UPLOADS_DIR = path.join(__dirname, '..', 'public', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  console.log('[API] Director public/uploads creat.');
+}
+
+// Bază de date: PostgreSQL (DATABASE_URL) sau SQLite – API async
+let dbGallery, dbMessages, dbCategories, dbAdminSettings, dbAnalytics, useDb;
+try {
+  const dbModule = await import('./db.js');
+  dbGallery = dbModule.dbGallery;
+  dbMessages = dbModule.dbMessages;
+  dbCategories = dbModule.dbCategories;
+  dbAdminSettings = dbModule.dbAdminSettings;
+  dbAnalytics = dbModule.dbAnalytics;
+  useDb = dbModule.useDb;
+} catch (e) {
+  useDb = () => false;
+}
 
 const isValidAdminToken = (token) => token && (token === 'admin-secret-token' || String(token).startsWith('admin-session-token-'));
 
@@ -70,6 +88,7 @@ const requireAdmin = (req, res, next) => {
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
+app.use('/images', express.static(path.join(__dirname, '..', 'public', 'images')));
 
 // Health check – fără fișiere, doar răspunde 200 (pentru a verifica că serverul și proxy merg)
 app.get('/api/health', (req, res) => {
@@ -191,23 +210,20 @@ const writeProducts = (products) => {
   }
 };
 
-// Funcție helper pentru citirea mesajelor
-const readMessages = () => {
+// Mesaje (DB sau JSON)
+const readMessagesFile = () => {
   try {
     if (!fs.existsSync(MESSAGES_FILE)) {
       fs.writeFileSync(MESSAGES_FILE, JSON.stringify([]));
       return [];
     }
-    const data = fs.readFileSync(MESSAGES_FILE, 'utf8');
-    return JSON.parse(data);
+    return JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
   } catch (error) {
     console.error('Eroare la citirea mesajelor:', error);
     return [];
   }
 };
-
-// Funcție helper pentru scrierea mesajelor
-const writeMessages = (messages) => {
+const writeMessagesFile = (messages) => {
   try {
     fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
     return true;
@@ -215,6 +231,23 @@ const writeMessages = (messages) => {
     console.error('Eroare la scrierea mesajelor:', error);
     return false;
   }
+};
+const readMessages = async () => {
+  if (useDb()) {
+    let data = await dbMessages.get([]);
+    if (Array.isArray(data) && data.length === 0 && fs.existsSync(MESSAGES_FILE)) {
+      try {
+        data = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
+        if (Array.isArray(data)) await dbMessages.set(data);
+      } catch (_) {}
+    }
+    return Array.isArray(data) ? data : [];
+  }
+  return readMessagesFile();
+};
+const writeMessages = async (messages) => {
+  if (useDb()) return await dbMessages.set(messages);
+  return writeMessagesFile(messages);
 };
 
 // Setări implicite dacă fișierul lipsește sau e invalid
@@ -226,21 +259,18 @@ const DEFAULT_ADMIN_SETTINGS = {
   features: { tryInMyRoomEnabled: true }
 };
 
-// Funcție helper pentru citirea setărilor admin (nu aruncă niciodată)
-const readAdminSettings = () => {
+// Setări admin (DB sau JSON)
+const readAdminSettingsFile = () => {
   try {
     if (!fs.existsSync(ADMIN_SETTINGS_FILE)) {
       fs.writeFileSync(ADMIN_SETTINGS_FILE, JSON.stringify(DEFAULT_ADMIN_SETTINGS, null, 2));
       return DEFAULT_ADMIN_SETTINGS;
     }
     const data = fs.readFileSync(ADMIN_SETTINGS_FILE, 'utf8');
-    if (!data || data.length > 50 * 1024 * 1024) return { ...DEFAULT_ADMIN_SETTINGS }; // max 50MB
+    if (!data || data.length > 50 * 1024 * 1024) return { ...DEFAULT_ADMIN_SETTINGS };
     const parsed = JSON.parse(data);
     if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_ADMIN_SETTINGS };
-    if (!parsed.credentials || typeof parsed.credentials !== 'object') {
-      parsed.credentials = DEFAULT_ADMIN_SETTINGS.credentials;
-    }
-    // Asigură că notificationsEmail și notificationsPhone există mereu (pentru salvare/încărcare corectă)
+    if (!parsed.credentials || typeof parsed.credentials !== 'object') parsed.credentials = DEFAULT_ADMIN_SETTINGS.credentials;
     if (parsed.notificationsEmail === undefined) parsed.notificationsEmail = DEFAULT_ADMIN_SETTINGS.notificationsEmail;
     if (parsed.notificationsPhone === undefined) parsed.notificationsPhone = DEFAULT_ADMIN_SETTINGS.notificationsPhone;
     return parsed;
@@ -249,9 +279,7 @@ const readAdminSettings = () => {
     return { ...DEFAULT_ADMIN_SETTINGS };
   }
 };
-
-// Funcție helper pentru scrierea setărilor admin
-const writeAdminSettings = (settings) => {
+const writeAdminSettingsFile = (settings) => {
   try {
     fs.writeFileSync(ADMIN_SETTINGS_FILE, JSON.stringify(settings, null, 2));
     return true;
@@ -260,9 +288,29 @@ const writeAdminSettings = (settings) => {
     return false;
   }
 };
+const readAdminSettings = async () => {
+  if (useDb()) {
+    let data = await dbAdminSettings.get(null);
+    if (!data && fs.existsSync(ADMIN_SETTINGS_FILE)) {
+      try {
+        data = readAdminSettingsFile();
+        if (data) await dbAdminSettings.set(data);
+      } catch (_) {}
+    }
+    if (!data || typeof data !== 'object') data = { ...DEFAULT_ADMIN_SETTINGS };
+    if (data.notificationsEmail === undefined) data.notificationsEmail = DEFAULT_ADMIN_SETTINGS.notificationsEmail;
+    if (data.notificationsPhone === undefined) data.notificationsPhone = DEFAULT_ADMIN_SETTINGS.notificationsPhone;
+    return data;
+  }
+  return readAdminSettingsFile();
+};
+const writeAdminSettings = async (settings) => {
+  if (useDb()) return await dbAdminSettings.set(settings);
+  return writeAdminSettingsFile(settings);
+};
 
-// Funcții helper pentru galerie
-const readGallery = () => {
+// Funcții helper pentru galerie (DB sau JSON)
+const readGalleryFile = () => {
   try {
     if (!fs.existsSync(GALLERY_FILE)) {
       fs.writeFileSync(GALLERY_FILE, JSON.stringify([]));
@@ -275,16 +323,31 @@ const readGallery = () => {
     return [];
   }
 };
-
-const writeGallery = (items) => {
+const writeGalleryFile = (items) => {
   try {
-    const data = JSON.stringify(items, null, 2);
-    fs.writeFileSync(GALLERY_FILE, data, 'utf8');
+    fs.writeFileSync(GALLERY_FILE, JSON.stringify(items, null, 2), 'utf8');
     return true;
   } catch (error) {
     console.error('Eroare la scrierea galeriei:', error);
     return false;
   }
+};
+const readGallery = async () => {
+  if (useDb()) {
+    let items = await dbGallery.get([]);
+    if (Array.isArray(items) && items.length === 0 && fs.existsSync(GALLERY_FILE)) {
+      try {
+        items = JSON.parse(fs.readFileSync(GALLERY_FILE, 'utf8'));
+        if (Array.isArray(items)) await dbGallery.set(items);
+      } catch (_) {}
+    }
+    return Array.isArray(items) ? items : [];
+  }
+  return readGalleryFile();
+};
+const writeGallery = async (items) => {
+  if (useDb()) return await dbGallery.set(items);
+  return writeGalleryFile(items);
 };
 
 // Categorii galerie (editabile din admin)
@@ -298,25 +361,20 @@ const defaultCategories = [
   { id: 'copii', label: 'Cameră Copii' },
   { id: 'gradina', label: 'Grădină' },
 ];
-const readCategories = () => {
+const readCategoriesFile = () => {
   try {
     if (!fs.existsSync(CATEGORIES_FILE)) {
       fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(defaultCategories, null, 2));
       return defaultCategories;
     }
-    const data = fs.readFileSync(CATEGORIES_FILE, 'utf8');
-    const list = JSON.parse(data);
-    const result = Array.isArray(list) && list.length > 0 ? list : defaultCategories;
-    if (!Array.isArray(list) || list.length === 0) {
-      fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(defaultCategories, null, 2));
-    }
-    return result;
+    const list = JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
+    return Array.isArray(list) && list.length > 0 ? list : defaultCategories;
   } catch (error) {
     console.error('Eroare la citirea categoriilor:', error);
     return defaultCategories;
   }
 };
-const writeCategories = (list) => {
+const writeCategoriesFile = (list) => {
   try {
     fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(list, null, 2));
     return true;
@@ -325,23 +383,36 @@ const writeCategories = (list) => {
     return false;
   }
 };
+const readCategories = async () => {
+  if (useDb()) {
+    let list = await dbCategories.get(null);
+    if (!Array.isArray(list) || list.length === 0) {
+      list = readCategoriesFile();
+      if (Array.isArray(list) && list.length > 0) await dbCategories.set(list);
+    }
+    return Array.isArray(list) && list.length > 0 ? list : defaultCategories;
+  }
+  return readCategoriesFile();
+};
+const writeCategories = async (list) => {
+  if (useDb()) return await dbCategories.set(list);
+  return writeCategoriesFile(list);
+};
 
-// Analytics - vizionări
-const readAnalytics = () => {
+// Analytics (DB sau JSON)
+const readAnalyticsFile = () => {
   try {
     if (!fs.existsSync(ANALYTICS_FILE)) {
       fs.writeFileSync(ANALYTICS_FILE, JSON.stringify({ views: [] }));
       return { views: [] };
     }
-    const data = fs.readFileSync(ANALYTICS_FILE, 'utf8');
-    return JSON.parse(data);
+    return JSON.parse(fs.readFileSync(ANALYTICS_FILE, 'utf8'));
   } catch (error) {
     console.error('Eroare la citirea analytics:', error);
     return { views: [] };
   }
 };
-
-const writeAnalytics = (data) => {
+const writeAnalyticsFile = (data) => {
   try {
     fs.writeFileSync(ANALYTICS_FILE, JSON.stringify(data, null, 2));
     return true;
@@ -349,6 +420,21 @@ const writeAnalytics = (data) => {
     console.error('Eroare la scrierea analytics:', error);
     return false;
   }
+};
+const readAnalytics = async () => {
+  if (useDb()) {
+    let data = await dbAnalytics.get(null);
+    if (!data || !data.views) {
+      data = readAnalyticsFile();
+      if (data && Array.isArray(data.views)) await dbAnalytics.set(data);
+    }
+    return data && typeof data === 'object' ? data : { views: [] };
+  }
+  return readAnalyticsFile();
+};
+const writeAnalytics = async (data) => {
+  if (useDb()) return await dbAnalytics.set(data);
+  return writeAnalyticsFile(data);
 };
 
 const getClientIp = (req) => {
@@ -460,7 +546,7 @@ app.post('/api/messages', async (req, res) => {
       return res.status(400).json({ error: 'Numele, emailul și mesajul sunt obligatorii' });
     }
 
-    const messages = readMessages();
+    const messages = await readMessages();
     const newMessage = {
       id: Date.now().toString(),
       fullName,
@@ -472,8 +558,8 @@ app.post('/api/messages', async (req, res) => {
     };
 
     messages.push(newMessage);
-    if (writeMessages(messages)) {
-      const settings = readAdminSettings();
+    if (await writeMessages(messages)) {
+      const settings = await readAdminSettings();
       const toEmail = (settings?.notificationsEmail || process.env.NOTIFICATIONS_EMAIL || '').trim();
       if (toEmail && toEmail.includes('@')) {
         const hasSmtp = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
@@ -519,13 +605,13 @@ app.post('/api/messages', async (req, res) => {
 });
 
 // GET - Obține toate mesajele (admin only)
-app.get('/api/admin/messages', (req, res) => {
+app.get('/api/admin/messages', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!adminToken) {
     return res.status(401).json({ error: 'Unauthorized - token missing' });
   }
 
-  const messages = readMessages();
+  const messages = await readMessages();
   res.json(messages);
 });
 
@@ -540,18 +626,18 @@ const normAbout = (it) => {
   };
 };
 // GET - Obține toate imaginile din galerie (fiecare item cu aboutDescription normalizat)
-app.get('/api/gallery', (req, res) => {
-  const gallery = readGallery();
+app.get('/api/gallery', async (req, res) => {
+  const gallery = await readGallery();
   res.json(gallery.map(normAbout));
 });
 
 // GET - Categorii (public, pentru site)
-app.get('/api/categories', (req, res) => {
-  res.json(readCategories());
+app.get('/api/categories', async (req, res) => {
+  res.json(await readCategories());
 });
 
 // POST - Adaugă categorie (admin)
-app.post('/api/categories', (req, res) => {
+app.post('/api/categories', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) return res.status(401).json({ error: 'Unauthorized' });
   const { id, label } = req.body || {};
@@ -559,41 +645,41 @@ app.post('/api/categories', (req, res) => {
     return res.status(400).json({ error: 'id și label sunt obligatorii' });
   }
   const safeId = id.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '') || 'categorie';
-  const list = readCategories();
+  const list = await readCategories();
   if (list.some((c) => c.id === safeId)) return res.status(400).json({ error: 'Există deja o categorie cu acest id' });
   list.push({ id: safeId, label: label.trim() });
-  writeCategories(list);
+  await writeCategories(list);
   res.status(201).json({ id: safeId, label: label.trim() });
 });
 
 // PUT - Actualizează categorie (admin)
-app.put('/api/categories/:id', (req, res) => {
+app.put('/api/categories/:id', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) return res.status(401).json({ error: 'Unauthorized' });
   const { label } = req.body || {};
   if (typeof label !== 'string' || !label.trim()) return res.status(400).json({ error: 'label obligatoriu' });
-  const list = readCategories();
+  const list = await readCategories();
   const idx = list.findIndex((c) => String(c.id) === String(req.params.id));
   if (idx === -1) return res.status(404).json({ error: 'Categorie negăsită' });
   list[idx].label = label.trim();
-  writeCategories(list);
+  await writeCategories(list);
   res.json(list[idx]);
 });
 
 // DELETE - Șterge categorie (admin)
-app.delete('/api/categories/:id', (req, res) => {
+app.delete('/api/categories/:id', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) return res.status(401).json({ error: 'Unauthorized' });
-  const list = readCategories();
+  const list = await readCategories();
   const filtered = list.filter((c) => String(c.id) !== String(req.params.id));
   if (filtered.length === list.length) return res.status(404).json({ error: 'Categorie negăsită' });
-  writeCategories(filtered);
+  await writeCategories(filtered);
   res.status(204).end();
 });
 
 // GET - Obține un item din galerie după ID (acceptă id string sau number în URL)
-app.get('/api/gallery/:id', (req, res) => {
-  const gallery = readGallery();
+app.get('/api/gallery/:id', async (req, res) => {
+  const gallery = await readGallery();
   const idParam = req.params.id;
   const item = gallery.find((it) => String(it.id) === String(idParam));
   if (!item) {
@@ -611,13 +697,13 @@ app.get('/api/gallery/:id', (req, res) => {
 });
 
 // POST - Adaugă un comentariu/recenzie la un item din galerie (public – vizitatori sau proprietar)
-app.post('/api/gallery/:id/reviews', express.json(), (req, res) => {
+app.post('/api/gallery/:id/reviews', express.json(), async (req, res) => {
   try {
     const { text, author, source } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim()) {
       return res.status(400).json({ error: 'Textul recenziei este obligatoriu' });
     }
-    const gallery = readGallery();
+    const gallery = await readGallery();
     const idParam = String(req.params.id || '').trim();
     const index = gallery.findIndex((it) => String(it.id) === idParam);
     if (index === -1) return res.status(404).json({ error: 'Element nu a fost găsit' });
@@ -632,7 +718,7 @@ app.post('/api/gallery/:id/reviews', express.json(), (req, res) => {
       source: source === 'owner' ? 'owner' : 'visitor'
     };
     item.reviews.push(review);
-    if (writeGallery(gallery)) {
+    if (await writeGallery(gallery)) {
       res.status(201).json({ review, item });
     } else {
       res.status(500).json({ error: 'Eroare la salvarea recenziei' });
@@ -644,9 +730,9 @@ app.post('/api/gallery/:id/reviews', express.json(), (req, res) => {
 });
 
 // GET - Recenzii recente (pentru homepage) – cu produsul și textul
-app.get('/api/reviews/recent', (req, res) => {
+app.get('/api/reviews/recent', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 6, 20);
-  const gallery = readGallery();
+  const gallery = await readGallery();
   const list = [];
   gallery.forEach((it) => {
     if (!Array.isArray(it.reviews)) return;
@@ -667,12 +753,12 @@ app.get('/api/reviews/recent', (req, res) => {
 });
 
 // GET - Toate recenziile (admin) – pentru filtrare, afișare/ascundere, ștergere
-app.get('/api/admin/reviews', (req, res) => {
+app.get('/api/admin/reviews', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!adminToken || !isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  const gallery = readGallery();
+  const gallery = await readGallery();
   const list = [];
   gallery.forEach((it) => {
     (it.reviews || []).forEach((r) => {
@@ -689,12 +775,12 @@ app.get('/api/admin/reviews', (req, res) => {
 });
 
 // PATCH - Actualizează vizibilitatea unei recenzii (admin)
-app.patch('/api/gallery/:id/reviews/:reviewId', express.json(), (req, res) => {
+app.patch('/api/gallery/:id/reviews/:reviewId', express.json(), async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!adminToken || !isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  const gallery = readGallery();
+  const gallery = await readGallery();
   const idParam = String(req.params.id || '').trim();
   const reviewId = String(req.params.reviewId || '').trim();
   const index = gallery.findIndex((it) => String(it.id) === idParam);
@@ -704,17 +790,17 @@ app.patch('/api/gallery/:id/reviews/:reviewId', express.json(), (req, res) => {
   if (!rev) return res.status(404).json({ error: 'Recenzie nu a fost găsită' });
   const { visible } = req.body || {};
   if (typeof visible === 'boolean') rev.visible = visible;
-  if (writeGallery(gallery)) res.json(item);
+  if (await writeGallery(gallery)) res.json(item);
   else res.status(500).json({ error: 'Eroare la salvare' });
 });
 
 // DELETE - Șterge o recenzie (admin)
-app.delete('/api/gallery/:id/reviews/:reviewId', (req, res) => {
+app.delete('/api/gallery/:id/reviews/:reviewId', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!adminToken || !isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  const gallery = readGallery();
+  const gallery = await readGallery();
   const idParam = String(req.params.id || '').trim();
   const reviewId = String(req.params.reviewId || '').trim();
   const index = gallery.findIndex((it) => String(it.id) === idParam);
@@ -723,12 +809,12 @@ app.delete('/api/gallery/:id/reviews/:reviewId', (req, res) => {
   const before = (item.reviews || []).length;
   item.reviews = (item.reviews || []).filter((r) => String(r.id) !== reviewId);
   if (item.reviews.length === before) return res.status(404).json({ error: 'Recenzie nu a fost găsită' });
-  if (writeGallery(gallery)) res.json({ message: 'Recenzie ștearsă', item });
+  if (await writeGallery(gallery)) res.json({ message: 'Recenzie ștearsă', item });
   else res.status(500).json({ error: 'Eroare la salvare' });
 });
 
 // POST - Migrează produsele existente în galerie (admin only)
-app.post('/api/admin/migrate-products-to-gallery', (req, res) => {
+app.post('/api/admin/migrate-products-to-gallery', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!adminToken) return res.status(401).json({ error: 'Unauthorized - token missing' });
 
@@ -738,7 +824,7 @@ app.post('/api/admin/migrate-products-to-gallery', (req, res) => {
       return res.json({ migrated: 0 });
     }
 
-    const gallery = readGallery();
+    const gallery = await readGallery();
     let migrated = 0;
 
     products.forEach(p => {
@@ -768,7 +854,7 @@ app.post('/api/admin/migrate-products-to-gallery', (req, res) => {
       migrated += 1;
     });
 
-    writeGallery(gallery);
+    await writeGallery(gallery);
     res.json({ migrated });
   } catch (e) {
     console.error('Migration error:', e);
@@ -777,7 +863,7 @@ app.post('/api/admin/migrate-products-to-gallery', (req, res) => {
 });
 
 // POST - Încarcă o imagine în galerie (admin only)
-app.post('/api/gallery/upload', (req, res) => {
+app.post('/api/gallery/upload', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!adminToken) {
     return res.status(401).json({ error: 'Unauthorized - token missing' });
@@ -870,7 +956,7 @@ app.post('/api/gallery/upload', (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    const gallery = readGallery();
+    const gallery = await readGallery();
     // If this new item is marked primary, unset isPrimary for existing items in same category
     if (newItem.isPrimary) {
       gallery.forEach(g => {
@@ -878,7 +964,7 @@ app.post('/api/gallery/upload', (req, res) => {
       });
     }
     gallery.unshift(newItem);
-    writeGallery(gallery);
+    await writeGallery(gallery);
 
     res.status(201).json(newItem);
   } catch (error) {
@@ -888,7 +974,7 @@ app.post('/api/gallery/upload', (req, res) => {
 });
 
 // PUT - Actualizează un item din galerie (admin only). Suportă mainImage și newExtraImages (base64).
-app.put('/api/gallery/:id', (req, res) => {
+app.put('/api/gallery/:id', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -898,7 +984,7 @@ app.put('/api/gallery/:id', (req, res) => {
     if (process.env.NODE_ENV !== 'production' && body.aboutDescription !== undefined) {
       console.log('[PUT gallery] aboutDescription length:', typeof body.aboutDescription === 'string' ? body.aboutDescription.length : 0);
     }
-    const gallery = readGallery();
+    const gallery = await readGallery();
     const idParam = String(req.params.id || '').trim();
     if (!idParam) return res.status(400).json({ error: 'ID lipsă' });
     const index = gallery.findIndex(it => String(it.id) === idParam);
@@ -1079,7 +1165,7 @@ app.put('/api/gallery/:id', (req, res) => {
       }
     });
     if (item.aboutDescription === undefined) item.aboutDescription = '';
-    const written = writeGallery(gallery);
+    const written = await writeGallery(gallery);
     if (!written) {
       return res.status(500).json({ error: 'Nu s-a putut salva pe disc' });
     }
@@ -1091,14 +1177,14 @@ app.put('/api/gallery/:id', (req, res) => {
 });
 
 // DELETE - Șterge o imagine din galerie (admin only)
-app.delete('/api/gallery/:id', (req, res) => {
+app.delete('/api/gallery/:id', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
-    const gallery = readGallery();
+    const gallery = await readGallery();
     const index = gallery.findIndex(item => String(item.id) === String(req.params.id));
     if (index === -1) {
       return res.status(404).json({ error: 'Element nu a fost găsit' });
@@ -1136,7 +1222,7 @@ app.delete('/api/gallery/:id', (req, res) => {
       });
     }
 
-    writeGallery(gallery);
+    await writeGallery(gallery);
     res.json({ message: 'Imagine ștearsă cu succes' });
   } catch (error) {
     console.error('Eroare la ștergerea imaginii:', error);
@@ -1145,13 +1231,13 @@ app.delete('/api/gallery/:id', (req, res) => {
 });
 
 // GET - Obține un mesaj după ID (admin only)
-app.get('/api/admin/messages/:id', (req, res) => {
+app.get('/api/admin/messages/:id', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!adminToken) {
     return res.status(401).json({ error: 'Unauthorized - token missing' });
   }
 
-  const messages = readMessages();
+  const messages = await readMessages();
   const message = messages.find(m => m.id === req.params.id);
   
   if (!message) {
@@ -1162,13 +1248,13 @@ app.get('/api/admin/messages/:id', (req, res) => {
 });
 
 // PUT - Marchează un mesaj ca citit (admin only)
-app.put('/api/admin/messages/:id/read', (req, res) => {
+app.put('/api/admin/messages/:id/read', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!adminToken) {
     return res.status(401).json({ error: 'Unauthorized - token missing' });
   }
 
-  const messages = readMessages();
+  const messages = await readMessages();
   const index = messages.findIndex(m => m.id === req.params.id);
   
   if (index === -1) {
@@ -1176,7 +1262,7 @@ app.put('/api/admin/messages/:id/read', (req, res) => {
   }
 
   messages[index].read = true;
-  if (writeMessages(messages)) {
+  if (await writeMessages(messages)) {
     res.json({ message: 'Mesajul a fost marcat ca citit' });
   } else {
     res.status(500).json({ error: 'Eroare la actualizare' });
@@ -1184,20 +1270,20 @@ app.put('/api/admin/messages/:id/read', (req, res) => {
 });
 
 // DELETE - Șterge un mesaj (admin only)
-app.delete('/api/admin/messages/:id', (req, res) => {
+app.delete('/api/admin/messages/:id', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!adminToken) {
     return res.status(401).json({ error: 'Unauthorized - token missing' });
   }
 
-  const messages = readMessages();
+  const messages = await readMessages();
   const filteredMessages = messages.filter(m => m.id !== req.params.id);
   
   if (messages.length === filteredMessages.length) {
     return res.status(404).json({ error: 'Mesaj nu a fost găsit' });
   }
   
-  if (writeMessages(filteredMessages)) {
+  if (await writeMessages(filteredMessages)) {
     res.json({ message: 'Mesaj șters cu succes' });
   } else {
     res.status(500).json({ error: 'Eroare la ștergerea mesajului' });
@@ -1205,7 +1291,7 @@ app.delete('/api/admin/messages/:id', (req, res) => {
 });
 
 // POST - Admin login (acceptă email SAU nume utilizator). Nu aruncă niciodată – răspunde mereu 200/400/401.
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', async (req, res) => {
   const loginInput = (req.body && (req.body.email != null ? req.body.email : req.body.username));
   const password = (req.body && req.body.password) != null ? String(req.body.password) : '';
 
@@ -1226,7 +1312,7 @@ app.post('/api/admin/login', (req, res) => {
   let creds = DEFAULT_ADMIN_SETTINGS.credentials;
   let profile = DEFAULT_ADMIN_SETTINGS.profile;
   try {
-    const settings = readAdminSettings();
+    const settings = await readAdminSettings();
     if (settings && settings.credentials && typeof settings.credentials === 'object') {
       creds = settings.credentials;
     }
@@ -1264,7 +1350,7 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // POST - Schimbă parola admin (admin only)
-app.post('/api/admin/change-password', (req, res) => {
+app.post('/api/admin/change-password', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -1279,7 +1365,7 @@ app.post('/api/admin/change-password', (req, res) => {
       return res.status(400).json({ error: 'Parola nouă trebuie să aibă cel puțin 6 caractere' });
     }
 
-    const settings = readAdminSettings();
+    const settings = await readAdminSettings();
     if (!settings || !settings.credentials) {
       return res.status(500).json({ error: 'Eroare la citirea setărilor' });
     }
@@ -1290,7 +1376,7 @@ app.post('/api/admin/change-password', (req, res) => {
     }
 
     settings.credentials.password = newPassword;
-    if (writeAdminSettings(settings)) {
+    if (await writeAdminSettings(settings)) {
       res.json({ message: 'Parolă actualizată cu succes' });
     } else {
       res.status(500).json({ error: 'Eroare la salvarea parolei' });
@@ -1302,13 +1388,13 @@ app.post('/api/admin/change-password', (req, res) => {
 });
 
 // GET - Obține setările admin (admin only)
-app.get('/api/admin/settings', (req, res) => {
+app.get('/api/admin/settings', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const settings = readAdminSettings();
+  const settings = await readAdminSettings();
   if (!settings) {
     return res.status(500).json({ error: 'Eroare la citirea setărilor' });
   }
@@ -1317,7 +1403,7 @@ app.get('/api/admin/settings', (req, res) => {
 });
 
 // PUT - Actualizează setările admin (admin only)
-app.put('/api/admin/settings', (req, res) => {
+app.put('/api/admin/settings', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -1329,7 +1415,7 @@ app.put('/api/admin/settings', (req, res) => {
     return res.status(400).json({ error: 'Niciun câmp de actualizat' });
   }
 
-  const currentSettings = readAdminSettings();
+  const currentSettings = await readAdminSettings();
   if (!currentSettings) {
     return res.status(500).json({ error: 'Eroare la citirea setărilor' });
   }
@@ -1348,7 +1434,7 @@ app.put('/api/admin/settings', (req, res) => {
     currentSettings.notificationsPhone = typeof notificationsPhone === 'string' ? notificationsPhone.trim() : '';
   }
 
-  if (writeAdminSettings(currentSettings)) {
+  if (await writeAdminSettings(currentSettings)) {
     res.json({ message: 'Setări actualizate cu succes', settings: currentSettings });
   } else {
     res.status(500).json({ error: 'Eroare la salvarea setărilor' });
@@ -1356,32 +1442,32 @@ app.put('/api/admin/settings', (req, res) => {
 });
 
 // POST - Înregistrează o vizionare (path + ip, opțional geo)
-app.post('/api/analytics/view', (req, res) => {
+app.post('/api/analytics/view', async (req, res) => {
   try {
     const path = req.body?.path || req.path || '/';
     const ip = getClientIp(req);
     const view = { path: path === '' ? '/' : path, ts: new Date().toISOString(), ip: ip || null };
-    const data = readAnalytics();
+    const data = await readAnalytics();
     data.views = data.views || [];
     data.views.push(view);
     // Păstrăm maxim 10000 vizionări
     if (data.views.length > 10000) {
       data.views = data.views.slice(-8000);
     }
-    writeAnalytics(data);
+    await writeAnalytics(data);
     res.status(204).end();
     // Opțional: rezolvă geo în background (doar pentru IP-uri reale, nu localhost)
     if (ip && ip !== '::1' && ip !== '127.0.0.1' && !ip.startsWith('192.168.') && !ip.startsWith('10.')) {
       fetch(`http://ip-api.com/json/${ip}?fields=country,city`, { signal: AbortSignal.timeout(2000) })
         .then((r) => r.json())
-        .then((geo) => {
+        .then(async (geo) => {
           if (geo && (geo.country || geo.city)) {
-            const d = readAnalytics();
+            const d = await readAnalytics();
             const last = d.views[d.views.length - 1];
             if (last && last.ts === view.ts) {
               last.country = geo.country || null;
               last.city = geo.city || null;
-              writeAnalytics(d);
+              await writeAnalytics(d);
             }
           }
         })
@@ -1394,13 +1480,13 @@ app.post('/api/analytics/view', (req, res) => {
 });
 
 // GET - Rezumat analytics (admin only)
-app.get('/api/analytics/summary', (req, res) => {
+app.get('/api/analytics/summary', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   try {
-    const data = readAnalytics();
+    const data = await readAnalytics();
     const views = data.views || [];
     const totalViews = views.length;
     const byPath = {};
@@ -1430,11 +1516,11 @@ app.get('/api/analytics/summary', (req, res) => {
 });
 
 // GET - Site features/configuration (întotdeauna 200, nu 500)
-app.get('/api/site/features', (req, res) => {
+app.get('/api/site/features', async (req, res) => {
   try {
     let settings;
     try {
-      settings = readAdminSettings();
+      settings = await readAdminSettings();
     } catch (e) {
       settings = null;
     }
@@ -1447,7 +1533,7 @@ app.get('/api/site/features', (req, res) => {
 });
 
 // PUT - Actualizează site features 
-app.put('/api/site/features', (req, res) => {
+app.put('/api/site/features', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized - token missing' });
@@ -1456,7 +1542,7 @@ app.put('/api/site/features', (req, res) => {
   try {
     const { tryInMyRoomEnabled } = req.body;
     
-    const settings = readAdminSettings();
+    const settings = await readAdminSettings();
     if (!settings) {
       return res.status(500).json({ error: 'Eroare la citirea setărilor' });
     }
@@ -1464,7 +1550,7 @@ app.put('/api/site/features', (req, res) => {
     settings.features = settings.features || {};
     settings.features.tryInMyRoomEnabled = tryInMyRoomEnabled;
 
-    if (writeAdminSettings(settings)) {
+    if (await writeAdminSettings(settings)) {
       res.json(settings.features);
     } else {
       res.status(500).json({ error: 'Eroare la salvarea setărilor' });
@@ -1482,6 +1568,17 @@ app.use((err, req, res, next) => {
   console.error('Eroare neprinsă:', err);
   res.status(500).json({ error: 'Eroare server: ' + (err.message || 'necunoscută') });
 });
+
+// Servește frontend-ul construit (dist/) pentru producție – SPA fallback
+const DIST_DIR = path.join(__dirname, '..', 'dist');
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/images')) return next();
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
+  });
+  console.log('[API] Frontend (dist/) servit de Express.');
+}
 
 // Pornește serverul (obligatoriu pentru /api/* – proxy Vite trimite aici)
 app.listen(PORT, '0.0.0.0', () => {

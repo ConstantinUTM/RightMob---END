@@ -17,7 +17,7 @@ export interface BatchResult {
   translated: string;
 }
 
-const getBase = () => getApiBase() || (typeof window !== 'undefined' ? `http://${window.location.hostname}:3001` : 'http://localhost:3001');
+const getBase = () => getApiBase();
 
 /**
  * Traduce mai multe texte într-un singur request. Reduce încărcarea față de N request-uri separate.

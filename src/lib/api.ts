@@ -1,11 +1,11 @@
-// API base: în dev folosește proxy Vite (/api -> localhost:3001), în prod URL complet
+// API base: în dev, Vite proxy (/api -> localhost:3001). În prod, Express servește totul.
 export const getApiBase = (): string => {
-  if (import.meta.env.DEV) return '';
-  return import.meta.env.VITE_API_URL || `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:3001`;
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  return '';
 };
 
-// URL pentru imaginile încărcate (uploads) – mereu de la backend
+// URL-uri /uploads și /images – relative, funcționează pe același origin (Express servește totul).
 export const getUploadsBase = (): string => {
-  if (import.meta.env.DEV) return 'http://localhost:3001';
-  return import.meta.env.VITE_API_URL || `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:3001`;
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  return '';
 };

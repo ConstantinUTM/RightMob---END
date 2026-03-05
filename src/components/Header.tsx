@@ -45,6 +45,16 @@ const Header: React.FC = () => {
 
   const email = import.meta.env.VITE_COMPANY_EMAIL || 'contact@rightmob.md';
   const phone = import.meta.env.VITE_COMPANY_PHONE || '';
+  const [phoneCopied, setPhoneCopied] = useState(false);
+  const handlePhoneClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const raw = phone.replace(/\s/g, '');
+    navigator.clipboard.writeText(raw).then(() => {
+      setPhoneCopied(true);
+      setTimeout(() => setPhoneCopied(false), 2000);
+    });
+  };
+  const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}&su=${encodeURIComponent('Solicitare consultație – RightMob')}&body=${encodeURIComponent('Bună ziua,\n\nV-am contactat prin intermediul site-ului RightMob.\nAș dori să solicit o consultație și mai multe detalii despre serviciile dumneavoastră.\n\nVă mulțumesc anticipat!\nCu respect,\n')}`;
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${headerBg} py-4`}>
@@ -57,15 +67,15 @@ const Header: React.FC = () => {
             </Link>
             {/* Mobil: email și telefon – email pe două rânduri dacă e lung, ca să se vadă tot */}
             <div className={`lg:hidden flex items-center gap-2 sm:gap-3 min-w-0 ${textColor}`}>
-              <a href={`mailto:${email}`} className={`flex items-center gap-1.5 p-1.5 rounded-lg font-medium transition-colors hover:opacity-80 min-w-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb]' : ''}`} aria-label={email}>
+              <a href={gmailComposeUrl} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1.5 p-1.5 rounded-lg font-medium transition-colors hover:opacity-80 min-w-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb]' : ''}`} aria-label={email}>
                 <Mail className="w-4 h-4 shrink-0" />
                 <span className="text-[11px] sm:text-xs break-all line-clamp-2 max-w-[110px] min-[380px]:max-w-[150px] sm:max-w-[200px]">{email}</span>
               </a>
               {phone && (
-                <a href={`tel:${phone.replace(/\s/g, '')}`} className={`flex items-center gap-1.5 p-1.5 rounded-lg font-medium transition-colors hover:opacity-80 shrink-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb]' : ''}`} aria-label="Telefon">
+                <button onClick={handlePhoneClick} className={`flex items-center gap-1.5 p-1.5 rounded-lg font-medium transition-colors hover:opacity-80 shrink-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb]' : ''}`} aria-label="Copiază numărul" title={phoneCopied ? 'Copiat!' : 'Apasă pentru a copia numărul'}>
                   <Phone className="w-4 h-4 shrink-0" />
-                  <span className="text-xs hidden sm:inline">{phone}</span>
-                </a>
+                  <span className="text-xs hidden sm:inline">{phoneCopied ? '✓ Copiat!' : phone}</span>
+                </button>
               )}
             </div>
           </div>
@@ -91,20 +101,23 @@ const Header: React.FC = () => {
             {/* Separator vizual între nav și contact/utils */}
             <span className="hidden xl:block w-px h-6 bg-current opacity-20 shrink-0" aria-hidden />
             <a
-              href={`mailto:${email}`}
+              href={gmailComposeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className={`hidden sm:flex items-center gap-2 px-2 py-1.5 rounded-lg font-medium transition-colors shrink-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb] hover:bg-blue-50/80' : 'text-white/90 hover:text-white'}`}
             >
               <Mail className="w-4 h-4 shrink-0" />
               <span className="text-sm hidden xl:inline truncate max-w-[160px]">{email}</span>
             </a>
             {phone && (
-              <a
-                href={`tel:${phone.replace(/\s/g, '')}`}
-                className={`hidden xl:flex items-center gap-2 px-2 py-1.5 rounded-lg font-medium transition-colors shrink-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb]' : 'text-white/90 hover:text-white'}`}
+              <button
+                onClick={handlePhoneClick}
+                className={`hidden xl:flex items-center gap-2 px-2 py-1.5 rounded-lg font-medium transition-colors shrink-0 cursor-pointer ${isSticky || !isTransparentPage ? 'text-[#2563eb] hover:bg-blue-50/80' : 'text-white/90 hover:text-white hover:bg-white/10'}`}
+                title={phoneCopied ? 'Copiat!' : 'Apasă pentru a copia numărul'}
               >
                 <Phone className="w-4 h-4 shrink-0" />
-                <span className="text-sm whitespace-nowrap">{phone}</span>
-              </a>
+                <span className="text-sm whitespace-nowrap">{phoneCopied ? '✓ Copiat!' : phone}</span>
+              </button>
             )}
             <span className="shrink-0"><LanguageSelector dark={isTransparentPage && !isSticky} /></span>
             {isAdmin && (
@@ -171,6 +184,9 @@ const Header: React.FC = () => {
                   Dashboard
                 </Link>
               )}
+              <div className="px-4 py-3 border-t border-current/10">
+                <LanguageSelector dark={isTransparentPage && !isSticky} />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -1,10 +1,6 @@
 import { getApiBase } from '../lib/api';
 
-const getGalleryApiBase = () => {
-  const b = getApiBase();
-  if (b) return b;
-  return import.meta.env.DEV ? '' : `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:3001`;
-};
+const getGalleryApiBase = () => getApiBase();
 
 export async function getGallery() {
   const base = getGalleryApiBase();

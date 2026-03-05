@@ -123,6 +123,14 @@ const translations: Record<Language, any> = {
       previewSubtitle: 'Poziționează mobila în câteva secunde',
       previewAlt: 'Previzualizare mobilier in camera',
     },
+    videoSection: {
+      badge: 'Descoperă povestea noastră',
+      title: 'Excelență în\nfiecare detaliu',
+      description: 'Fiecare piesă de mobilier RightMob este rezultatul unei pasiuni profunde pentru design, materiale premium și atenție desăvârșită la detalii. De la concept la realizare, creăm spații care inspiră.',
+      cta: 'Solicită o consultație',
+      stat1Label: 'Proiecte finalizate',
+      stat2Label: 'Satisfacție clienți',
+    },
     currency: {
       changeLabel: 'Schimbă valuta prețului',
     },
@@ -487,6 +495,11 @@ const translations: Record<Language, any> = {
       viewMore: 'Vezi mai mult',
       viewLess: 'Vezi mai puțin',
     },
+    stats: {
+      products: 'Produse premium',
+      experience: 'Ani de experiență',
+      clients: 'Clienți mulțumiți',
+    },
     footer: {
       about: 'Despre Noi',
       aboutText: 'RIGHT MOB este destinația ta principală pentru mobilier de lux și stil de viață premium.',
@@ -524,6 +537,14 @@ const translations: Record<Language, any> = {
       previewTitle: 'Live preview',
       previewSubtitle: 'Place furniture in seconds',
       previewAlt: 'Live furniture preview',
+    },
+    videoSection: {
+      badge: 'Discover our story',
+      title: 'Excellence in\nevery detail',
+      description: 'Every piece of RightMob furniture is the result of a deep passion for design, premium materials, and impeccable attention to detail. From concept to completion, we create spaces that inspire.',
+      cta: 'Request a consultation',
+      stat1Label: 'Projects completed',
+      stat2Label: 'Client satisfaction',
     },
     currency: {
       changeLabel: 'Change price currency',
@@ -889,6 +910,11 @@ const translations: Record<Language, any> = {
       viewMore: 'View More',
       viewLess: 'View Less',
     },
+    stats: {
+      products: 'Premium products',
+      experience: 'Years of experience',
+      clients: 'Happy clients',
+    },
     footer: {
       about: 'About Us',
       aboutText: 'RIGHT MOB is your premier destination for luxury furniture and premium lifestyle.',
@@ -926,6 +952,14 @@ const translations: Record<Language, any> = {
       previewTitle: 'Предпросмотр вживую',
       previewSubtitle: 'Разместите мебель за несколько секунд',
       previewAlt: 'Предпросмотр мебели в комнате',
+    },
+    videoSection: {
+      badge: 'Откройте нашу историю',
+      title: 'Совершенство в\nкаждой детали',
+      description: 'Каждый предмет мебели RightMob — это результат глубокой страсти к дизайну, премиальным материалам и безупречному вниманию к деталям. От идеи до воплощения мы создаём пространства, которые вдохновляют.',
+      cta: 'Запросить консультацию',
+      stat1Label: 'Проектов реализовано',
+      stat2Label: 'Удовлетворённость клиентов',
     },
     currency: {
       changeLabel: 'Изменить валюту цены',
@@ -1290,6 +1324,11 @@ const translations: Record<Language, any> = {
       sort: 'Сортировка',
       viewMore: 'Показать больше',
       viewLess: 'Показать меньше',
+    },
+    stats: {
+      products: 'Премиум продукты',
+      experience: 'Лет опыта',
+      clients: 'Довольных клиентов',
     },
     footer: {
       about: 'О нас',

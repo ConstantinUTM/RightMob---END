@@ -11,9 +11,9 @@ import {
 import { Link } from 'react-router-dom';
 import galleryService from '../services/galleryService';
 import { getAdminToken } from '../contexts/AuthContext';
-import { getUploadsBase } from '../lib/api';
+import { getApiBase, getUploadsBase } from '../lib/api';
 
-const API_URL = `http://${window.location.hostname}:3001`;
+const API_URL = getApiBase();
 
 interface AnalyticsSummary {
   totalViews: number;
