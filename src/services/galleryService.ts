@@ -130,7 +130,7 @@ export async function deleteImage(id: string, token?: string) {
 /** Adaugă un comentariu/recenzie la un item (vizitator sau proprietar). */
 export async function addReview(
   itemId: string,
-  data: { text: string; author?: string; source?: 'owner' | 'visitor' }
+  data: { text: string; author?: string; source?: 'owner' | 'visitor'; lang?: string }
 ) {
   const base = getGalleryApiBase();
   const res = await fetch(`${base}/api/gallery/${encodeURIComponent(String(itemId))}/reviews`, {

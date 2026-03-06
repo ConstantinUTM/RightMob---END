@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Sparkles } from 'lucide-react';
@@ -8,6 +8,7 @@ import { CATEGORY_LABELS } from '../components/Breadcrumbs';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getUploadsBase } from '../lib/api';
 import { getCategoryLabel } from '../lib/translationHelpers';
+import { getLocalizedField, type AppLanguage } from '../lib/localizedContent';
 
 const SORT_VALUES = ['recent', 'name-asc', 'name-desc', 'category'] as const;
 type SortValue = (typeof SORT_VALUES)[number];
@@ -232,54 +233,96 @@ const GalleryPage: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 auto-rows-[200px] sm:auto-rows-[240px] md:auto-rows-[280px] lg:auto-rows-[320px] grid-flow-dense">
             <AnimatePresence mode="popLayout">
-              {sortedItems.map((item, idx) => {
-                const url = toUrl(item.url || '');
-                const n = sortedItems.length;
-                const cols = 4;
-                const remainder = n % cols || (n ? cols : 0);
-                const noSingleLast = remainder !== 1;
-                const spanRow = noSingleLast && (idx % 3 === 0 || idx % 4 === 2) && idx < n - cols;
-                const spanCol = noSingleLast && idx % 4 === 1 && n > idx + 1;
-                return (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.25, delay: Math.min(idx * 0.03, 0.2) }}
-                    className={`rounded-xl overflow-hidden bg-white border border-neutral-100 shadow-md hover:shadow-lg transition-shadow ${spanRow ? 'row-span-2' : ''} ${spanCol && !spanRow ? 'col-span-2' : ''}`}
-                  >
-                    <Link to={item.id ? `/galerie/${item.id}` : '/galerie'} className="block h-full group">
-                      <div className="relative w-full h-full min-h-[200px] sm:min-h-[240px] md:min-h-[280px]">
-                        <img
-                          src={url}
-                          alt={item.description || item.filename || ''}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                          <p className="text-white text-xs sm:text-sm font-medium line-clamp-2 drop-shadow-md">
-                            {item.description || t('gallery.noDescription')}
-                          </p>
-                          {item.category && (
-                            <span className="text-white/80 text-[10px] sm:text-xs mt-0.5 inline-block">
-                              {categoryLabel(item.category)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                );
-              })}
+              {sortedItems.map((item, idx) => (
+                <GalleryCard
+                  key={item.id}
+                  item={item}
+                  idx={idx}
+                  total={sortedItems.length}
+                  toUrl={toUrl}
+                  categoryLabel={categoryLabel}
+                  language={language}
+                  t={t}
+                />
+              ))}
             </AnimatePresence>
           </div>
         )}
       </div>
     </div>
+  );
+};
+
+const GalleryCard: React.FC<{
+  item: any; idx: number; total: number;
+  toUrl: (u: string) => string; categoryLabel: (c: string) => string;
+  language: string; t: (k: string) => string;
+}> = ({ item, idx, total, toUrl, categoryLabel, language, t }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const isBlue = idx % 2 === 0;
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!cardRef.current || !glowRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    glowRef.current.style.opacity = '1';
+    glowRef.current.style.background = `radial-gradient(300px circle at ${x}px ${y}px, ${isBlue ? 'rgba(37,99,235,0.25)' : 'rgba(220,38,38,0.25)'}, transparent 70%)`;
+  }, [isBlue]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (glowRef.current) glowRef.current.style.opacity = '0';
+  }, []);
+
+  const url = toUrl(item.url || '');
+  const cols = 4;
+  const remainder = total % cols || (total ? cols : 0);
+  const noSingleLast = remainder !== 1;
+  const spanRow = noSingleLast && (idx % 3 === 0 || idx % 4 === 2) && idx < total - cols;
+  const spanCol = noSingleLast && idx % 4 === 1 && total > idx + 1;
+
+  return (
+    <motion.div
+      ref={cardRef}
+      layout
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.35, delay: Math.min(idx * 0.04, 0.25) }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`rounded-2xl overflow-hidden bg-neutral-900 shadow-lg transition-all duration-500 hover:-translate-y-1.5 hover:shadow-2xl ${spanRow ? 'row-span-2' : ''} ${spanCol && !spanRow ? 'col-span-2' : ''}`}
+    >
+      <Link to={item.id ? `/galerie/${item.id}` : '/galerie'} className="block h-full group relative">
+        <div className="relative w-full h-full min-h-[200px] sm:min-h-[240px] md:min-h-[280px]">
+          <img
+            src={url}
+            alt={item.description || item.filename || ''}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+          <div
+            ref={glowRef}
+            className="absolute inset-0 opacity-0 transition-opacity duration-300 pointer-events-none"
+          />
+
+          {item.category && (
+            <span className="absolute top-3 left-3 px-2.5 py-1 bg-white/15 backdrop-blur-md text-white text-[10px] sm:text-xs font-medium rounded-full border border-white/20">
+              {categoryLabel(item.category)}
+            </span>
+          )}
+
+          <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+            <p className="text-white text-sm sm:text-base font-semibold line-clamp-2 drop-shadow-lg">
+              {getLocalizedField(item, 'description', language as AppLanguage) || t('gallery.noDescription')}
+            </p>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
   );
 };
 

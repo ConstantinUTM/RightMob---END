@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
+import { translateToAll, translateText, translateFromAny } from './translations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -89,6 +90,9 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 app.use('/images', express.static(path.join(__dirname, '..', 'public', 'images')));
+app.get('/favicon.png', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'favicon.png'));
+});
 
 // Health check – fără fișiere, doar răspunde 200 (pentru a verifica că serverul și proxy merg)
 app.get('/api/health', (req, res) => {
@@ -604,6 +608,31 @@ app.post('/api/messages', async (req, res) => {
   }
 });
 
+// POST - Salvează metadata de la click pe email/whatsapp/viber (fără autentificare, public)
+app.post('/api/email-track', async (req, res) => {
+  try {
+    const { device, city, lang, page, pageDetails, source } = req.body;
+    const messages = await readMessages();
+    const newEntry = {
+      id: Date.now().toString(),
+      fullName: source === 'whatsapp' ? 'WhatsApp Click' : source === 'viber' ? 'Viber Click' : 'Email Click',
+      email: '',
+      phone: '',
+      message: pageDetails || page || 'Vizitator a apăsat butonul de contact',
+      timestamp: new Date().toISOString(),
+      read: false,
+      type: 'contact-click',
+      metadata: { device: device || '', city: city || '', lang: lang || '', page: page || '', source: source || 'email' },
+    };
+    messages.push(newEntry);
+    await writeMessages(messages);
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    console.error('Error saving email-track:', err);
+    res.status(500).json({ error: 'Eroare internă' });
+  }
+});
+
 // GET - Obține toate mesajele (admin only)
 app.get('/api/admin/messages', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
@@ -696,10 +725,14 @@ app.get('/api/gallery/:id', async (req, res) => {
   res.json(out);
 });
 
+function translateReviewText(originalText, sourceLang) {
+  return translateFromAny(originalText, sourceLang);
+}
+
 // POST - Adaugă un comentariu/recenzie la un item din galerie (public – vizitatori sau proprietar)
 app.post('/api/gallery/:id/reviews', express.json(), async (req, res) => {
   try {
-    const { text, author, source } = req.body || {};
+    const { text, author, source, lang } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim()) {
       return res.status(400).json({ error: 'Textul recenziei este obligatoriu' });
     }
@@ -709,9 +742,17 @@ app.post('/api/gallery/:id/reviews', express.json(), async (req, res) => {
     if (index === -1) return res.status(404).json({ error: 'Element nu a fost găsit' });
     const item = gallery[index];
     if (!Array.isArray(item.reviews)) item.reviews = [];
+
+    const trimmed = text.trim();
+    const sourceLang = ['ro', 'en', 'ru'].includes(lang) ? lang : undefined;
+    const translated = translateReviewText(trimmed, sourceLang);
+
     const review = {
       id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-      text: text.trim(),
+      text: trimmed,
+      text_ro: translated.ro,
+      text_en: translated.en,
+      text_ru: translated.ru,
       author: (author != null ? String(author) : '').trim(),
       date: new Date().toISOString(),
       visible: true,
@@ -742,8 +783,10 @@ app.get('/api/reviews/recent', async (req, res) => {
         list.push({
           productId: it.id,
           productName: it.description || '',
+          productName_en: it.description_en || it.description || '',
+          productName_ru: it.description_ru || it.description || '',
           productImage: itemUrl,
-          review: { id: r.id, text: r.text, author: r.author, date: r.date, source: r.source }
+          review: { id: r.id, text: r.text, text_ro: r.text_ro || r.text, text_en: r.text_en || r.text, text_ru: r.text_ru || r.text, author: r.author, date: r.date, source: r.source }
         });
       }
     });
@@ -766,12 +809,53 @@ app.get('/api/admin/reviews', async (req, res) => {
         productId: it.id,
         productName: it.description || '',
         productImage: it.url || '',
-        review: { id: r.id, text: r.text, author: r.author, date: r.date, visible: r.visible !== false, source: r.source }
+        review: { id: r.id, text: r.text, text_ro: r.text_ro || r.text, text_en: r.text_en || r.text, text_ru: r.text_ru || r.text, author: r.author, date: r.date, visible: r.visible !== false, source: r.source }
       });
     });
   });
   list.sort((a, b) => (b.review.date || '').localeCompare(a.review.date || ''));
   res.json(list);
+});
+
+// POST - Traduce retroactiv recenziile + descrierile elementelor din galerie (admin)
+app.post('/api/admin/reviews/translate-all', async (req, res) => {
+  const adminToken = req.headers['x-admin-token'];
+  if (!adminToken || !isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const gallery = await readGallery();
+  let translatedReviews = 0;
+  let translatedDescriptions = 0;
+  for (const item of gallery) {
+    // Traduce description → description_en, description_ru
+    if (item.description && item.description.trim()) {
+      const descT = translateToAll(item.description);
+      if (!item.description_en || !item.description_en.trim()) {
+        item.description_en = descT.en;
+        translatedDescriptions++;
+      }
+      if (!item.description_ru || !item.description_ru.trim()) {
+        item.description_ru = descT.ru;
+      }
+    }
+    // Traduce recenzii
+    if (!Array.isArray(item.reviews)) continue;
+    for (const r of item.reviews) {
+      if (r.text_ro && r.text_en && r.text_ru) continue;
+      if (!r.text || !r.text.trim()) continue;
+      const t = translateReviewText(r.text);
+      r.text_ro = t.ro;
+      r.text_en = t.en;
+      r.text_ru = t.ru;
+      translatedReviews++;
+    }
+  }
+  if (translatedReviews > 0 || translatedDescriptions > 0) await writeGallery(gallery);
+  res.json({
+    message: `${translatedReviews} recenzii + ${translatedDescriptions} descrieri traduse.`,
+    translatedReviews,
+    translatedDescriptions
+  });
 });
 
 // PATCH - Actualizează vizibilitatea unei recenzii (admin)
@@ -940,12 +1024,15 @@ app.post('/api/gallery/upload', async (req, res) => {
     }) : [];
 
     const aboutDesc = (aboutDescription != null) ? String(aboutDescription).trim() : '';
+    const descTranslated = translateToAll(description || '');
     const newItem = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 6),
       filename: mainSaved.filename,
       url: mainSaved.url,
       category: category || '',
       description: description || '',
+      description_en: descTranslated.en,
+      description_ru: descTranslated.ru,
       aboutDescription: aboutDesc || aboutRo || '',
       aboutDescription_ro: aboutRo || aboutDesc,
       aboutDescription_en: aboutEn,
@@ -1015,18 +1102,33 @@ app.put('/api/gallery/:id', async (req, res) => {
         try { fs.unlinkSync(fullPath); } catch (e) { console.warn('Nu am putut șterge fișierul:', e); }
       }
     };
-    if (description !== undefined) item.description = description;
+    if (description !== undefined) {
+      item.description = description;
+      const descT = translateToAll(description);
+      item.description_en = descT.en;
+      item.description_ru = descT.ru;
+    }
     if (category !== undefined) item.category = category;
     if (visible !== undefined) item.visible = !!visible;
     if (Array.isArray(reviewsPayload)) {
-      item.reviews = reviewsPayload.map((r, i) => ({
-        id: r.id || `rev_${Date.now()}_${i}`,
-        text: typeof r.text === 'string' ? r.text.trim() : '',
-        author: r.author != null ? String(r.author).trim() : '',
-        date: r.date != null ? String(r.date).trim() : '',
-        visible: r.visible !== false,
-        source: r.source === 'owner' ? 'owner' : (r.source === 'visitor' ? 'visitor' : undefined)
-      }));
+      const existingReviews = Array.isArray(item.reviews) ? item.reviews : [];
+      item.reviews = reviewsPayload.map((r, i) => {
+        const textVal = typeof r.text === 'string' ? r.text.trim() : '';
+        const existing = existingReviews.find(er => er.id === r.id);
+        const needsTranslation = !existing || existing.text !== textVal || !existing.text_en;
+        const translated = needsTranslation && textVal ? translateToAll(textVal) : null;
+        return {
+          id: r.id || `rev_${Date.now()}_${i}`,
+          text: textVal,
+          text_ro: translated ? translated.ro : (existing?.text_ro || textVal),
+          text_en: translated ? translated.en : (existing?.text_en || ''),
+          text_ru: translated ? translated.ru : (existing?.text_ru || ''),
+          author: r.author != null ? String(r.author).trim() : '',
+          date: r.date != null ? String(r.date).trim() : '',
+          visible: r.visible !== false,
+          source: r.source === 'owner' ? 'owner' : (r.source === 'visitor' ? 'visitor' : undefined)
+        };
+      });
     }
     if (isPrimary !== undefined) {
       item.isPrimary = !!isPrimary;
@@ -1581,10 +1683,32 @@ if (fs.existsSync(DIST_DIR)) {
 }
 
 // Pornește serverul (obligatoriu pentru /api/* – proxy Vite trimite aici)
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`[API] 🚀 Server pornit pe http://localhost:${PORT} – login și /api funcționează acum`);
   const adminExists = fs.existsSync(ADMIN_SETTINGS_FILE);
   console.log(`[API] 📄 adminSettings.json: ${adminExists ? 'există' : 'LIPSEȘTE'}`);
+
+  // Auto-translate reviews that are missing translations
+  try {
+    const gallery = await readGallery();
+    let changed = false;
+    gallery.forEach((item) => {
+      if (!Array.isArray(item.reviews)) return;
+      item.reviews.forEach((rev) => {
+        if (rev.text && (!rev.text_en || !rev.text_ru)) {
+          const t = translateToAll(rev.text);
+          rev.text_ro = t.ro;
+          rev.text_en = t.en;
+          rev.text_ru = t.ru;
+          changed = true;
+        }
+      });
+    });
+    if (changed) {
+      await writeGallery(gallery);
+      console.log('[API] ✅ Recenzii existente traduse automat');
+    }
+  } catch (e) { console.warn('[API] Nu am putut traduce recenziile:', e); }
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`[API] ❌ Portul ${PORT} e deja folosit. Oprește alt proces sau schimbă PORT.`);

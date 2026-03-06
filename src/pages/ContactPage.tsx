@@ -153,7 +153,7 @@ const ContactPage: React.FC = () => {
                     {phoneNumber}
                   </a>
                   <a
-                    href={`https://wa.me/${whatsappNumber}`}
+                    href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Bună ziua! 👋\n\nV-am contactat prin site-ul RightMob.\nAș dori mai multe detalii și o consultație.\n\n📅 ${new Date().toLocaleDateString('ro-RO')}  |  📱 ${/iPhone|iPad|Android/i.test(navigator.userAgent) ? 'Mobil' : 'Desktop'}\n\nVă mulțumesc!`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="ml-2 p-1.5 rounded-full text-[#25D366] hover:bg-[#25D366]/10 transition-colors"
@@ -319,7 +319,7 @@ const ContactPage: React.FC = () => {
             </h3>
             <div className="flex flex-wrap justify-center gap-5">
               {[
-                { href: `https://wa.me/${whatsappNumber}`, label: 'WhatsApp', icon: 'wa', color: '#25D366', hoverBg: 'linear-gradient(135deg, #25D366, #20BA5A)' },
+                { href: `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Bună ziua! 👋\n\nV-am contactat prin pagina de Contact RightMob.\nAș dori mai multe detalii și o consultație.\n\n📅 ${new Date().toLocaleDateString('ro-RO')}  |  📱 ${/iPhone|iPad|Android/i.test(navigator.userAgent) ? 'Mobil' : 'Desktop'}\n\nVă mulțumesc!`)}`, label: 'WhatsApp', icon: 'wa', color: '#25D366', hoverBg: 'linear-gradient(135deg, #25D366, #20BA5A)' },
                 { href: `viber://chat?number=%2B${viberNumber}`, label: 'Viber', icon: 'viber', color: '#665CAC', hoverBg: 'linear-gradient(135deg, #665CAC, #59509D)' },
                 { href: instagramUrl, label: 'Instagram', icon: 'ig', color: '#E1306C', hoverBg: 'linear-gradient(135deg, #f09433, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888)' },
                 { href: facebookUrl, label: 'Facebook', icon: 'fb', color: '#1877F2', hoverBg: 'linear-gradient(135deg, #1877F2, #0C5FCD)' },

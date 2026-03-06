@@ -492,6 +492,7 @@ const ProductDetailPage: React.FC = () => {
                           text: commentText.trim(),
                           author: commentAuthor.trim() || undefined,
                           source: commentIsOwner ? 'owner' : 'visitor',
+                          lang: language,
                         });
                         setCommentText('');
                         setCommentAuthor('');

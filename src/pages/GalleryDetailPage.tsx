@@ -158,7 +158,7 @@ const GalleryDetailPage: React.FC = () => {
   // Descriere „Despre proiect” – pe limbă (RO/EN/RU); fallback la aboutDescription sau titlu
   const lang = (language || 'ro') as 'ro' | 'en' | 'ru';
   const aboutRaw = getLocalizedField(item, 'aboutDescription', lang) || (item.aboutDescription != null ? String(item.aboutDescription).trim() : '');
-  const aboutText = aboutRaw || (item.description ? String(item.description).trim() : '') || '';
+  const aboutText = aboutRaw || getLocalizedField(item, 'description', lang) || (item.description ? String(item.description).trim() : '') || '';
   const hasAboutText = aboutText.length > 0;
 
   // Tabel doar pentru câmpurile suplimentare din admin (item.details); valoare după limbă (RO/EN/RU)
@@ -202,7 +202,7 @@ const GalleryDetailPage: React.FC = () => {
               </p>
             )}
             <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-serif font-light text-neutral-900 leading-[1.15] tracking-tight">
-              {item.description || t('gallery.noDescription')}
+              {getLocalizedField(item, 'description', lang) || t('gallery.noDescription')}
             </h1>
           </header>
 
@@ -293,12 +293,12 @@ const GalleryDetailPage: React.FC = () => {
                     <ul className="space-y-6 max-w-2xl mb-8">
                       {visibleReviews.map((rev: any, i: number) => (
                         <li key={rev.id || i} className="pl-4 border-l-2 border-neutral-200">
-                          <p className="text-neutral-700 leading-relaxed whitespace-pre-line">{rev.text}</p>
+                          <p className="text-neutral-700 leading-relaxed whitespace-pre-line">{(language === 'en' ? rev.text_en : language === 'ru' ? rev.text_ru : rev.text_ro) || rev.text}</p>
                           {(rev.author || rev.date) && (
                             <p className="text-sm text-neutral-500 mt-2">
                               {rev.author}
                               {rev.author && rev.date ? ' · ' : ''}
-                              {rev.date}
+                              {rev.date ? new Date(rev.date).toLocaleDateString(language === 'ro' ? 'ro-RO' : language === 'ru' ? 'ru-RU' : 'en-GB') : ''}
                             </p>
                           )}
                         </li>
@@ -318,6 +318,7 @@ const GalleryDetailPage: React.FC = () => {
                             text: commentText.trim(),
                             author: commentAuthor.trim() || undefined,
                             source: commentIsOwner ? 'owner' : 'visitor',
+                            lang: language,
                           });
                           setCommentText('');
                           setCommentAuthor('');

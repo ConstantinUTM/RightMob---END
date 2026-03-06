@@ -1,25 +1,128 @@
 import React from 'react';
 import './FloatingButtons.css';
 
+function getDeviceInfo(): string {
+  const ua = navigator.userAgent;
+  if (/iPhone/i.test(ua)) return 'iPhone';
+  if (/iPad/i.test(ua)) return 'iPad';
+  if (/Android/i.test(ua)) return 'Android';
+  return 'Desktop';
+}
+
+function getDateTimeStr(): string {
+  const now = new Date();
+  const d = now.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const t = now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+  return `${d}, ${t}`;
+}
+
+function getLocationFromTimezone(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const city = tz.split('/').pop()?.replace(/_/g, ' ') || '';
+    return city;
+  } catch { return ''; }
+}
+
+function getSiteLang(): string {
+  const stored = localStorage.getItem('language') || localStorage.getItem('lang');
+  if (stored) return stored.toUpperCase();
+  return document.documentElement.lang?.toUpperCase() || 'RO';
+}
+
+function getPageContext(): { page: string; details: string } {
+  const path = window.location.pathname;
+  if (path.startsWith('/galerie/') || path.startsWith('/produs/')) {
+    const h1 = document.querySelector('h1');
+    const name = h1?.textContent?.trim();
+    if (name) return { page: 'Produs / Galerie', details: `Sunt interesat de: *${name}*\nLink: ${window.location.href}` };
+  }
+  if (path === '/galerie') return { page: 'Galerie', details: 'Am navigat prin galeria de produse' };
+  if (path === '/despre') return { page: 'Despre noi', details: 'Am vizitat pagina Despre noi' };
+  if (path === '/contact') return { page: 'Contact', details: 'Am vizitat pagina de Contact' };
+  return { page: 'Pagina principală', details: '' };
+}
+
+function sendTrack(source: string): void {
+  const device = getDeviceInfo();
+  const city = getLocationFromTimezone();
+  const lang = getSiteLang();
+  const ctx = getPageContext();
+  fetch('/api/email-track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device, city, lang, page: ctx.page, pageDetails: ctx.details, source }),
+  }).catch(() => {});
+}
+
+function buildMessage(format: 'whatsapp' | 'viber' | 'email'): string {
+  const ctx = getPageContext();
+  const device = getDeviceInfo();
+  const dateTime = getDateTimeStr();
+  const city = getLocationFromTimezone();
+  const lang = getSiteLang();
+
+  const detailsBlock = ctx.details ? `${ctx.details}\n\n` : '';
+  const infoLine = [`📱 ${device}`, city ? `📍 ${city}` : '', `🌐 ${lang}`, `📄 ${ctx.page}`].filter(Boolean).join('  |  ');
+
+  if (format === 'email') {
+    return (
+      'Bună ziua,\n\n' +
+      'V-am contactat prin intermediul site-ului RightMob.\n' +
+      (ctx.details ? `${ctx.details}\n` : '') +
+      '\nAș dori să solicit o consultație și mai multe detalii despre serviciile dumneavoastră.\n\n' +
+      '---\n' +
+      `Dispozitiv: ${device}\n` +
+      (city ? `Locație aprox.: ${city}\n` : '') +
+      `Limba site: ${lang}\n` +
+      `Pagina: ${ctx.page}\n` +
+      '---\n\n' +
+      'Vă mulțumesc anticipat!\n' +
+      'Cu respect,\n'
+    );
+  }
+
+  if (format === 'viber') {
+    return (
+      `Bună ziua!\n\n` +
+      detailsBlock +
+      `Aș dori mai multe detalii și o consultație.\n\n` +
+      `${infoLine}\n\n` +
+      `Mulțumesc!`
+    );
+  }
+
+  return (
+    `Bună ziua! 👋\n\n` +
+    detailsBlock +
+    `Aș dori mai multe detalii și o consultație.\n\n` +
+    `${infoLine}\n\n` +
+    `Vă mulțumesc!`
+  );
+}
+
 const FloatingButtons: React.FC = () => {
   const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '373XXXXXXXX';
   const viberNumber = import.meta.env.VITE_VIBER_NUMBER || '373XXXXXXXX';
   const email = import.meta.env.VITE_COMPANY_EMAIL || 'contact@rightmob.md';
   const openWhatsApp = () => {
+    sendTrack('whatsapp');
+    const msg = encodeURIComponent(buildMessage('whatsapp'));
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const url = isMobile ? `whatsapp://send?phone=${whatsappNumber}` : `https://wa.me/${whatsappNumber}`;
+    const url = isMobile
+      ? `whatsapp://send?phone=${whatsappNumber}&text=${msg}`
+      : `https://wa.me/${whatsappNumber}?text=${msg}`;
     window.open(url, '_blank');
   };
-  const openViber = () => window.open(`viber://chat?number=%2B${viberNumber}`, '_blank');
+  const openViber = () => {
+    sendTrack('viber');
+    const msg = encodeURIComponent(buildMessage('viber'));
+    window.open(`viber://chat?number=%2B${viberNumber}&text=${msg}`, '_blank');
+  };
   const openEmail = () => {
+    sendTrack('email');
     const subject = encodeURIComponent('Solicitare consultație – RightMob');
-    const body = encodeURIComponent(
-      'Bună ziua,\n\n' +
-      'V-am contactat prin intermediul site-ului RightMob.\n' +
-      'Aș dori să solicit o consultație și mai multe detalii despre serviciile dumneavoastră.\n\n' +
-      'Vă mulțumesc anticipat!\n' +
-      'Cu respect,\n'
-    );
+    const body = encodeURIComponent(buildMessage('email'));
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}&su=${subject}&body=${body}`;
     window.open(gmailUrl, '_blank', 'noopener,noreferrer');
   };

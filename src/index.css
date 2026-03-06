@@ -272,6 +272,10 @@
     @apply bg-[#25D366] border-[#25D366] shadow-lg shadow-[#25D366]/20;
   }
 
+  .social-icon-footer.viber:hover {
+    @apply bg-[#665CAC] border-[#665CAC] shadow-lg shadow-[#665CAC]/20;
+  }
+
   .social-icon-footer.instagram:hover {
     @apply bg-gradient-to-br from-[#405DE6] via-[#E1306C] to-[#FFDC80] border-[#E1306C] shadow-lg shadow-[#E1306C]/20;
   }
@@ -358,4 +362,16 @@
       @apply w-12 h-12;
       animation: float 3s ease-in-out infinite;
     }
-  }}
+  }
+}
+
+video:fullscreen,
+video:-webkit-full-screen {
+  object-fit: contain;
+  background: #000;
+}
+
+video:fullscreen::backdrop,
+video:-webkit-full-screen::backdrop {
+  background: #000;
+}

@@ -17,14 +17,13 @@ const AboutPage: React.FC = () => {
   }, []);
 
   const aboutImages = [
-    '/uploads/living/liing-2026/1771536299102-IMG_9859.JPG',
-    '/uploads/1771368519326-Photo__14_of_38_.jpg',
-    '/uploads/1771368519329-Photo__15_of_38_.jpg',
+    '/images/about/about-1.jpg',
+    '/images/about/about-2.jpg',
+    '/images/about/about-3.jpg',
     '/images/IMG_9859.JPG',
-    '/images/Logo2.jpg',
-    '/images/Logo1.jpg',
+    '/images/IMG_9872.JPG',
   ];
-  const fallbackImages = ['/images/IMG_9859.JPG', '/images/Logo2.jpg', '/images/Logo1.jpg', '/images/IMG_9859.JPG', '/images/Logo2.jpg'];
+  const fallbackImages = ['/images/IMG_9859.JPG', '/images/IMG_9872.JPG', '/images/IMG_9859.JPG'];
 
   const steps = [
     { key: 'step1' as const, num: '01' },
@@ -40,8 +39,17 @@ const AboutPage: React.FC = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative bg-[#0a0a0a] text-white py-10 sm:py-14 px-4 sm:px-6 overflow-hidden"
+        className="relative text-white py-10 sm:py-14 px-4 sm:px-6 overflow-hidden"
       >
+        <img
+          src="/images/about/about-2.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          fetchPriority="high"
+          decoding="async"
+          onError={(e) => { (e.target as HTMLImageElement).src = '/images/IMG_9872.JPG'; }}
+        />
+        <div className="absolute inset-0 bg-black/65" />
         {/* Accente discrete */}
         <div className="absolute top-10 right-10 opacity-15" aria-hidden>
           <ChevronDown className="w-8 h-8 text-white" />
@@ -72,27 +80,23 @@ const AboutPage: React.FC = () => {
             <div className="flex flex-wrap items-end justify-end gap-4 sm:gap-5 lg:gap-6">
               <div className="w-44 sm:w-56 lg:w-64 aspect-[3/4] rounded-xl overflow-hidden shadow-2xl flex-shrink-0 ring-1 ring-white/10">
                 <img
-                  src={aboutImages[1]}
+                  src={aboutImages[0]}
                   alt=""
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const el = e.target as HTMLImageElement;
-                    if (el.src !== fallbackImages[1]) el.src = fallbackImages[1];
-                    else if (el.src !== aboutImages[3]) el.src = aboutImages[3];
-                    else el.style.display = 'none';
+                    el.src = fallbackImages[0];
                   }}
                 />
               </div>
               <div className="w-36 sm:w-44 lg:w-52 aspect-square rounded-xl overflow-hidden shadow-xl flex-shrink-0 mt-8 sm:mt-12 ring-1 ring-white/10 hidden sm:block">
                 <img
-                  src={aboutImages[4]}
+                  src={aboutImages[2]}
                   alt=""
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const el = e.target as HTMLImageElement;
-                    if (el.src !== aboutImages[3]) el.src = aboutImages[3];
-                    else if (el.src !== fallbackImages[2]) el.src = fallbackImages[2];
-                    else el.style.display = 'none';
+                    el.src = fallbackImages[1];
                   }}
                 />
               </div>
@@ -249,15 +253,16 @@ const AboutPage: React.FC = () => {
             initial={{ opacity: 0, x: 24 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="order-1 lg:order-2 rounded-2xl overflow-hidden aspect-[4/5] min-h-[380px] sm:min-h-[440px] lg:max-h-[600px]"
+            className="order-1 lg:order-2 rounded-2xl overflow-hidden aspect-[9/16] max-h-[70vh] bg-black"
           >
             <video
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               src="/images/video/about.mp4"
               autoPlay
               playsInline
               muted
               loop
+              controls
               preload="auto"
             />
           </motion.div>
@@ -265,18 +270,25 @@ const AboutPage: React.FC = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-10 md:py-14 px-4 sm:px-6 bg-[#0a0a0a] text-white text-center overflow-x-hidden">
+      <section className="relative py-10 md:py-14 px-4 sm:px-6 text-white text-center overflow-x-hidden">
+        <img
+          src="/images/about/about-3.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).src = '/images/IMG_9859.JPG'; }}
+        />
+        <div className="absolute inset-0 bg-black/70" />
         <motion.h2
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-2xl md:text-3xl font-serif font-light mb-10 max-w-2xl mx-auto"
+          className="relative z-10 text-2xl md:text-3xl font-serif font-light mb-10 max-w-2xl mx-auto"
         >
           {t('about.ctaText')}
         </motion.h2>
         <Link
           to="/contact"
-          className="group inline-flex items-center gap-3 px-8 py-4 border-2 border-white text-white font-medium tracking-wide transition-all hover:bg-white hover:text-[#0a0a0a]"
+          className="relative z-10 group inline-flex items-center gap-3 px-8 py-4 border-2 border-white text-white font-medium tracking-wide transition-all hover:bg-white hover:text-[#0a0a0a]"
         >
           {t('about.ctaButton')}
           <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />

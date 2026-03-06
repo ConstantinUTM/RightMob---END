@@ -99,7 +99,7 @@ const HeroSection: React.FC = () => {
 
       {/* Content direct pe fundal, fără card transparent */}
       <div className="relative z-10 w-full px-4 sm:px-6 lg:px-10 flex justify-center">
-        <div className="w-full max-w-5xl lg:max-w-6xl py-12 px-6 sm:py-14 sm:px-10 md:py-16 md:px-14 lg:px-16 text-center space-y-8">
+        <div className="w-full max-w-5xl lg:max-w-6xl pt-24 pb-12 px-6 sm:pt-14 sm:pb-14 sm:px-10 md:py-16 md:px-14 lg:px-16 text-center space-y-8">
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -146,7 +146,7 @@ const HeroSection: React.FC = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0 }}
-          className="grid grid-cols-3 gap-8 max-w-2xl mx-auto pt-16"
+          className="grid grid-cols-3 gap-8 max-w-2xl mx-auto pt-8 md:pt-16"
         >
           {[
             { number: '100+', label: t('hero.stats.products') },
@@ -512,8 +512,10 @@ const TestimonialsSection: React.FC = () => {
   const [recentReviews, setRecentReviews] = useState<Array<{
     productId: string;
     productName: string;
+    productName_en?: string;
+    productName_ru?: string;
     productImage: string;
-    review: { id?: string; text: string; author?: string; date?: string; source?: string };
+    review: { id?: string; text: string; text_ro?: string; text_en?: string; text_ru?: string; author?: string; date?: string; source?: string };
   }>>([]);
 
   useEffect(() => {
@@ -566,11 +568,11 @@ const TestimonialsSection: React.FC = () => {
                   </div>
                   {item.productName && (
                     <p className="text-sm font-semibold text-primary-600 mb-2 truncate" title={item.productName}>
-                      {item.productName}
+                      {language === 'en' ? (item.productName_en || item.productName) : language === 'ru' ? (item.productName_ru || item.productName) : item.productName}
                     </p>
                   )}
                   <p className="text-dark-700 leading-relaxed mb-6 text-lg italic">
-                    "{item.review.text}"
+                    "{(language === 'en' ? item.review.text_en : language === 'ru' ? item.review.text_ru : item.review.text_ro) || item.review.text}"
                   </p>
                   <div className="flex items-center space-x-4">
                     {imgSrc && (

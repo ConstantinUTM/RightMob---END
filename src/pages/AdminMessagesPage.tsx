@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Mail, Phone, User, Calendar, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Mail, Phone, User, Calendar, CheckCircle2, Monitor, MapPin, Globe, MousePointerClick } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth, getAdminToken } from '../contexts/AuthContext';
+
+interface MessageMetadata {
+  device?: string;
+  city?: string;
+  lang?: string;
+  page?: string;
+  source?: string;
+}
 
 interface Message {
   id: string;
@@ -12,6 +20,8 @@ interface Message {
   message: string;
   timestamp: string;
   read: boolean;
+  type?: string;
+  metadata?: MessageMetadata;
 }
 
 const AdminMessagesPage: React.FC = () => {
@@ -164,33 +174,53 @@ const AdminMessagesPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="max-h-[600px] overflow-y-auto">
-                  {messages.map((msg) => (
-                    <button
-                      key={msg.id}
-                      onClick={() => {
-                        setSelectedMessage(msg);
-                        if (!msg.read) {
-                          markAsRead(msg.id);
-                        }
-                      }}
-                      className={`w-full p-4 border-b border-gray-100 text-left hover:bg-primary-50 transition-colors ${
-                        selectedMessage?.id === msg.id ? 'bg-primary-50 border-l-4 border-l-primary-600' : ''
-                      } ${!msg.read ? 'bg-blue-50' : ''}`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className={`font-semibold text-dark-900 truncate ${!msg.read ? 'font-bold' : ''}`}>
-                            {msg.fullName}
-                          </p>
-                          <p className="text-sm text-dark-500 truncate">{msg.email}</p>
-                          <p className="text-xs text-dark-400 mt-1 line-clamp-1">{msg.message}</p>
+                  {messages.map((msg) => {
+                    const isClick = msg.type === 'contact-click';
+                    const sourceLabel = isClick ? (msg.metadata?.source === 'whatsapp' ? 'WhatsApp' : msg.metadata?.source === 'viber' ? 'Viber' : 'Email') : '';
+                    return (
+                      <button
+                        key={msg.id}
+                        onClick={() => {
+                          setSelectedMessage(msg);
+                          if (!msg.read) {
+                            markAsRead(msg.id);
+                          }
+                        }}
+                        className={`w-full p-4 border-b border-gray-100 text-left hover:bg-primary-50 transition-colors ${
+                          selectedMessage?.id === msg.id ? 'bg-primary-50 border-l-4 border-l-primary-600' : ''
+                        } ${!msg.read ? 'bg-blue-50' : ''}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className={`font-semibold text-dark-900 truncate ${!msg.read ? 'font-bold' : ''}`}>
+                                {msg.fullName}
+                              </p>
+                              {isClick && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                                  msg.metadata?.source === 'whatsapp' ? 'bg-green-100 text-green-700' :
+                                  msg.metadata?.source === 'viber' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {sourceLabel}
+                                </span>
+                              )}
+                            </div>
+                            {!isClick && <p className="text-sm text-dark-500 truncate">{msg.email}</p>}
+                            {isClick && msg.metadata && (
+                              <p className="text-xs text-dark-400 mt-1">
+                                {[msg.metadata.device, msg.metadata.city, msg.metadata.lang].filter(Boolean).join(' · ')}
+                              </p>
+                            )}
+                            <p className="text-xs text-dark-400 mt-1 line-clamp-1">{msg.message}</p>
+                          </div>
+                          {!msg.read && (
+                            <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0 mt-2"></div>
+                          )}
                         </div>
-                        {!msg.read && (
-                          <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0 mt-2"></div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>
@@ -240,35 +270,39 @@ const AdminMessagesPage: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-100">
                     <div>
                       <div className="flex items-center gap-2 text-dark-600 mb-1">
-                        <User className="w-4 h-4" />
-                        <span className="text-sm font-medium">Nume</span>
+                        {selectedMessage.type === 'contact-click' ? <MousePointerClick className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                        <span className="text-sm font-medium">{selectedMessage.type === 'contact-click' ? 'Tip' : 'Nume'}</span>
                       </div>
                       <p className="text-dark-900 font-semibold">{selectedMessage.fullName}</p>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 text-dark-600 mb-1">
-                        <Mail className="w-4 h-4" />
-                        <span className="text-sm font-medium">Email</span>
+                    {selectedMessage.email && (
+                      <div>
+                        <div className="flex items-center gap-2 text-dark-600 mb-1">
+                          <Mail className="w-4 h-4" />
+                          <span className="text-sm font-medium">Email</span>
+                        </div>
+                        <a 
+                          href={`mailto:${selectedMessage.email}`}
+                          className="text-primary-600 hover:text-primary-700 font-semibold"
+                        >
+                          {selectedMessage.email}
+                        </a>
                       </div>
-                      <a 
-                        href={`mailto:${selectedMessage.email}`}
-                        className="text-primary-600 hover:text-primary-700 font-semibold"
-                      >
-                        {selectedMessage.email}
-                      </a>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 text-dark-600 mb-1">
-                        <Phone className="w-4 h-4" />
-                        <span className="text-sm font-medium">Telefon</span>
+                    )}
+                    {selectedMessage.phone && (
+                      <div>
+                        <div className="flex items-center gap-2 text-dark-600 mb-1">
+                          <Phone className="w-4 h-4" />
+                          <span className="text-sm font-medium">Telefon</span>
+                        </div>
+                        <a 
+                          href={`tel:${selectedMessage.phone.replace(/\s/g, '')}`}
+                          className="text-primary-600 hover:text-primary-700 font-semibold"
+                        >
+                          {selectedMessage.phone}
+                        </a>
                       </div>
-                      <a 
-                        href={`tel:${selectedMessage.phone.replace(/\s/g, '')}`}
-                        className="text-primary-600 hover:text-primary-700 font-semibold"
-                      >
-                        {selectedMessage.phone}
-                      </a>
-                    </div>
+                    )}
                     <div>
                       <div className="flex items-center gap-2 text-dark-600 mb-1">
                         <Calendar className="w-4 h-4" />
@@ -286,9 +320,48 @@ const AdminMessagesPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Metadata for contact-click entries */}
+                  {selectedMessage.type === 'contact-click' && selectedMessage.metadata && (
+                    <div className="mb-6 pb-6 border-b border-gray-100">
+                      <h3 className="font-semibold text-dark-900 mb-3">Detalii vizitator</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {selectedMessage.metadata.device && (
+                          <div className="bg-gray-50 rounded-xl p-3 text-center">
+                            <Monitor className="w-5 h-5 mx-auto mb-1 text-blue-500" />
+                            <p className="text-xs text-dark-500">Dispozitiv</p>
+                            <p className="text-sm font-semibold text-dark-900">{selectedMessage.metadata.device}</p>
+                          </div>
+                        )}
+                        {selectedMessage.metadata.city && (
+                          <div className="bg-gray-50 rounded-xl p-3 text-center">
+                            <MapPin className="w-5 h-5 mx-auto mb-1 text-red-500" />
+                            <p className="text-xs text-dark-500">Locație</p>
+                            <p className="text-sm font-semibold text-dark-900">{selectedMessage.metadata.city}</p>
+                          </div>
+                        )}
+                        {selectedMessage.metadata.lang && (
+                          <div className="bg-gray-50 rounded-xl p-3 text-center">
+                            <Globe className="w-5 h-5 mx-auto mb-1 text-green-500" />
+                            <p className="text-xs text-dark-500">Limba</p>
+                            <p className="text-sm font-semibold text-dark-900">{selectedMessage.metadata.lang}</p>
+                          </div>
+                        )}
+                        {selectedMessage.metadata.page && (
+                          <div className="bg-gray-50 rounded-xl p-3 text-center">
+                            <MousePointerClick className="w-5 h-5 mx-auto mb-1 text-purple-500" />
+                            <p className="text-xs text-dark-500">Pagina</p>
+                            <p className="text-sm font-semibold text-dark-900">{selectedMessage.metadata.page}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Message Content */}
                   <div>
-                    <h3 className="font-semibold text-dark-900 mb-3">Mesajul</h3>
+                    <h3 className="font-semibold text-dark-900 mb-3">
+                      {selectedMessage.type === 'contact-click' ? 'Context' : 'Mesajul'}
+                    </h3>
                     <div className="bg-dark-50 rounded-xl p-4 text-dark-700 whitespace-pre-wrap">
                       {selectedMessage.message}
                     </div>
