@@ -618,6 +618,6 @@ export function translateFromAny(text, sourceLang) {
   return { ro: trimmed, en: trimmed, ru: trimmed };
 }
 
-export { translateText };
+export { translateText, detectLanguage };
 
 export default { translateToAll, translateText, translateFromAny, detectLanguage };

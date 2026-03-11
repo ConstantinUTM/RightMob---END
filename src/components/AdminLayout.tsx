@@ -8,6 +8,7 @@ import {
   Settings,
   Mail,
   MessageSquare,
+  FileText,
   LogOut,
   Menu,
   X,
@@ -81,6 +82,11 @@ const AdminLayout: React.FC = () => {
       path: '/admin/reviews',
       icon: MessageSquare,
       label: 'Recenzii',
+    },
+    {
+      path: '/admin/content',
+      icon: FileText,
+      label: 'Conținut site',
     },
     {
       path: '/admin/settings',

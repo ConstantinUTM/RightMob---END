@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, MapPin, Phone, Mail, Clock, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSiteContent } from '../contexts/SiteContentContext';
 
 const ACCENT = '#374151';
 const RED = '#dc2626';
@@ -11,8 +12,9 @@ const WARM_GREY = '#5c5c5c';
 
 const ContactPage: React.FC = () => {
   const { t } = useLanguage();
-  const heroImage = '/uploads/1771366598610-2026-02-16_20.35.51.jpg';
-  const sideImage = '/uploads/1771368519326-Photo__14_of_38_.jpg';
+  const { getImageOverride } = useSiteContent();
+  const heroImage = getImageOverride('contact.heroImage', '/uploads/1771366598610-2026-02-16_20.35.51.jpg');
+  const sideImage = getImageOverride('contact.sideImage', '/uploads/1771368519326-Photo__14_of_38_.jpg');
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -26,13 +28,14 @@ const ContactPage: React.FC = () => {
   const email = import.meta.env.VITE_COMPANY_EMAIL || 'contact@rightmob.md';
   const address = import.meta.env.VITE_COMPANY_ADDRESS || 'Ismail 33, Chișinău';
   const schedule = import.meta.env.VITE_COMPANY_SCHEDULE || 'Lu - Sâm: 09:00 - 18:00';
-  const addressForMap = (() => {
-    const raw = (address || '').trim();
-    const withoutEt = raw.split(/\s+et\./i)[0].trim();
-    const withoutOf = withoutEt.split(/\s+of\./i)[0].trim();
-    const firstPart = withoutOf.split(',')[0].trim();
-    return firstPart || raw;
-  })();
+  const mapsPlaceId = import.meta.env.VITE_GOOGLE_MAPS_PLACE_ID || '';
+  const addressForMap = import.meta.env.VITE_GOOGLE_MAPS_QUERY || 'RIGHT MOB, Strada Ismail 33, MD-2001, Chișinău, Moldova';
+  const mapsSearchUrl = mapsPlaceId
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressForMap)}&query_place_id=${encodeURIComponent(mapsPlaceId)}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressForMap)}`;
+  const mapsEmbedUrl = mapsPlaceId
+    ? `https://www.google.com/maps?q=place_id:${encodeURIComponent(mapsPlaceId)}&z=16&output=embed`
+    : `https://www.google.com/maps?q=${encodeURIComponent(addressForMap)}&z=16&output=embed`;
   const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '373XXXXXXXX';
   const viberNumber = import.meta.env.VITE_VIBER_NUMBER || '373XXXXXXXX';
   const instagramUrl = import.meta.env.VITE_INSTAGRAM_URL || 'https://instagram.com/rightmob';
@@ -74,18 +77,22 @@ const ContactPage: React.FC = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.7 }}
-        className="relative h-[55vh] min-h-[380px] max-h-[600px] overflow-hidden rounded-b-3xl"
+        className="relative h-[55vh] min-h-[380px] max-h-[600px] overflow-hidden rounded-t-none rounded-b-3xl"
       >
         <img
           src={heroImage}
           alt="Contact"
-          className="absolute inset-0 w-full h-full object-cover rounded-b-3xl"
+          className="absolute inset-0 w-full h-full object-cover rounded-t-none rounded-b-3xl"
           fetchPriority="high"
           loading="eager"
           onError={(e) => {
             const el = e.target as HTMLImageElement;
-            if (el.src !== '/images/about/about-2.jpg') el.src = '/images/about/about-2.jpg';
-            else if (el.src !== '/images/IMG_9859.JPG') el.src = '/images/IMG_9859.JPG';
+            if (el.dataset.fallbackApplied === '1') {
+              el.src = '/images/IMG_9859.JPG';
+              return;
+            }
+            el.dataset.fallbackApplied = '1';
+            el.src = '/images/about/about-2.jpg';
           }}
         />
         <div
@@ -129,27 +136,23 @@ const ContactPage: React.FC = () => {
                 className="absolute inset-0 w-full h-full object-cover"
                   onError={(e) => {
                     const el = e.target as HTMLImageElement;
-                    if (el.src !== '/images/about/about-2.jpg') el.src = '/images/about/about-2.jpg';
-                    else if (el.src !== '/images/IMG_9859.JPG') el.src = '/images/IMG_9859.JPG';
-                    else el.style.display = 'none';
+                    if (el.dataset.fallbackApplied === '1') {
+                      el.src = '/images/IMG_9859.JPG';
+                      return;
+                    }
+                    el.dataset.fallbackApplied = '1';
+                    el.src = '/images/about/about-2.jpg';
                   }}
               />
             </div>
 
             {/* Dreapta – panou alb: titlu, slogan, listă contact, formular */}
             <div className="bg-white p-8 md:p-10 lg:p-12 flex flex-col">
-              <h2 className="text-2xl md:text-3xl font-serif font-bold text-neutral-900 tracking-tight">
-                {t('contact.title')}
-              </h2>
-              <p className="mt-3 text-sm md:text-base text-neutral-500 leading-relaxed max-w-md">
-                {t('contact.subtitle')}
-              </p>
-
               {/* Listă contact – minimalistă, icon + text */}
-              <ul className="mt-8 space-y-4">
+              <ul className="space-y-4">
                 <li className="flex items-center gap-3">
                   <Phone className="w-5 h-5 shrink-0 text-neutral-800" />
-                  <a href={`tel:${phoneNumber.replace(/\s/g, '')}`} className="text-neutral-700 hover:text-neutral-900 text-sm md:text-base transition-colors">
+                  <a href={`tel:${phoneNumber.replace(/\s/g, '')}`} className="text-neutral-700 hover:text-neutral-900 hover:underline underline-offset-4 text-sm md:text-base transition-colors">
                     {phoneNumber}
                   </a>
                   <a
@@ -164,11 +167,18 @@ const ContactPage: React.FC = () => {
                 </li>
                 <li className="flex items-start gap-3">
                   <MapPin className="w-5 h-5 shrink-0 mt-0.5 text-neutral-800" />
-                  <span className="text-neutral-600 text-sm md:text-base">{address}</span>
+                  <a
+                    href={mapsSearchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-neutral-600 hover:text-neutral-900 text-sm md:text-base transition-colors underline-offset-4 hover:underline"
+                  >
+                    {address}
+                  </a>
                 </li>
                 <li className="flex items-center gap-3">
                   <Mail className="w-5 h-5 shrink-0 text-neutral-800" />
-                  <a href={`mailto:${email}`} className="text-neutral-700 hover:text-neutral-900 text-sm md:text-base break-all transition-colors">
+                  <a href={`mailto:${email}`} className="text-neutral-700 hover:text-neutral-900 hover:underline underline-offset-4 text-sm md:text-base break-all transition-colors">
                     {email}
                   </a>
                 </li>
@@ -277,7 +287,7 @@ const ContactPage: React.FC = () => {
                   </p>
                   <p className="text-sm leading-relaxed mb-4" style={{ color: WARM_GREY }}>{address}</p>
                   <a
-                    href={`https://www.google.com/maps?q=${encodeURIComponent(addressForMap)}`}
+                    href={mapsSearchUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 text-sm font-medium hover:underline"
@@ -290,7 +300,7 @@ const ContactPage: React.FC = () => {
                 <div className="min-h-[320px] lg:min-h-[380px] rounded-b-2xl lg:rounded-bl-none lg:rounded-tr-2xl lg:rounded-br-2xl overflow-hidden">
                   <iframe
                     title="Locație pe hartă"
-                    src={`https://www.google.com/maps?q=${encodeURIComponent(addressForMap)}&z=15&output=embed`}
+                    src={mapsEmbedUrl}
                     className="w-full h-full min-h-[320px] lg:min-h-[380px] border-0 block"
                     allowFullScreen
                     loading="lazy"
@@ -342,7 +352,7 @@ const ContactPage: React.FC = () => {
                     )}
                     {s.icon === 'viber' && (
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-7 h-7" fill="currentColor">
-                        <path d="M11.4 0C9.473.028 5.333.344 3.02 2.467 1.302 4.187.696 6.7.633 9.817.57 12.933.488 18.776 6.12 20.36h.003l-.004 2.416s-.037.977.61 1.177c.777.242 1.234-.5 1.98-1.302.407-.44.972-1.084 1.397-1.58 3.85.323 6.812-.416 7.15-.525.776-.252 5.176-.815 5.89-6.657.734-6.014-.418-9.817-2.1-11.517C19.87.963 16.055.05 12.026 0h-.65.024z" />
+                        <path d="M11.4 0C9.473.028 5.333.344 3.02 2.467 1.302 4.187.696 6.7.633 9.817.57 12.933.488 18.776 6.12 20.36h.003l-.004 2.416s-.037.977.61 1.177c.777.242 1.234-.5 1.98-1.302.407-.44.972-1.084 1.397-1.58 3.85.323 6.812-.416 7.15-.525.776-.252 5.176-.815 5.89-6.657.734-6.014-.418-9.817-2.1-11.517C19.87.963 16.055.05 12.026 0h-.65.024zm.043 1.803h.495c3.64.043 6.91.828 8.34 2.18 1.447 1.37 2.363 4.553 1.725 9.684-.58 4.666-3.96 5.034-4.618 5.245-.3.098-3.008.773-6.315.524 0 0-2.52 3.04-3.3 3.82-.124.13-.293.17-.392.15-.13-.03-.166-.188-.165-.414l.02-4.018c-4.762-1.32-4.485-6.295-4.43-8.862.054-2.564.567-4.66 1.99-6.023 1.917-1.814 5.412-2.097 7.05-2.133v-.153zm.202 1.698c-.2.007-.357.057-.357.36 0 .304.19.332.43.332 2.36.063 4.51.67 5.994 1.955 1.49 1.29 2.03 3.083 2.097 5.42.008.23-.01.407.24.482.32.098.476-.06.49-.31.067-2.567-.6-4.63-2.31-6.113-1.718-1.488-4.134-2.128-6.584-2.125zm-3.84 2.05c-.39 0-.707.082-1.005.277l-.01.01c-.31.2-.604.44-.87.71-.26.263-.35.578-.348.873.01.585.22 1.087.596 1.64.75 1.106 1.918 2.603 3.456 4.142 1.54 1.538 3.044 2.71 4.15 3.46.554.376 1.056.587 1.64.597.296.003.61-.087.874-.348.27-.266.51-.56.71-.87l.01-.01c.197-.297.278-.614.278-1.004 0-.292-.11-.594-.398-.895-.387-.403-1.167-.957-1.77-1.414-.457-.347-.95-.328-1.295.017l-.935.935c-.26.26-.586.25-.586.25-3.083-.78-3.86-3.86-3.86-3.86s-.01-.326.25-.586l.935-.935c.346-.346.364-.84.017-1.296-.457-.602-1.01-1.382-1.413-1.77-.3-.287-.603-.398-.894-.398z" />
                       </svg>
                     )}
                     {s.icon === 'ig' && (

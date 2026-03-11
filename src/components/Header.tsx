@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, Box, Mail, LayoutDashboard, Phone } from 'lucide-react';
+import { Menu, X, LogOut, Box, Mail, LayoutDashboard, Phone, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -223,7 +223,7 @@ const Header: React.FC = () => {
               </div>
             )}
             <span className="shrink-0"><LanguageSelector dark={isTransparentPage && !isSticky} /></span>
-            {isAdmin && (
+            {isAdmin ? (
               <>
                 <Link
                   to="/admin"
@@ -243,6 +243,15 @@ const Header: React.FC = () => {
                   <LogOut className="w-6 h-6" />
                 </motion.button>
               </>
+            ) : (
+              <Link
+                to="/admin"
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg font-medium transition-colors shrink-0 whitespace-nowrap border ${isSticky || !isTransparentPage ? 'text-[#1e3a8a] border-blue-200 hover:bg-blue-50' : 'text-white border-white/40 hover:bg-white/10'}`}
+                aria-label="Admin login"
+              >
+                <Shield className="w-4 h-4 shrink-0" />
+                <span className="hidden xl:inline">Admin</span>
+              </Link>
             )}
           </div>
 
@@ -282,11 +291,9 @@ const Header: React.FC = () => {
               <Link to="/contact" className={`block px-4 py-3 font-medium ${isActive('/contact') ? 'text-primary-500' : ''} hover:opacity-90`} onClick={() => setIsMobileMenuOpen(false)}>
                 {t('nav.contact')}
               </Link>
-              {isAdmin && (
-                <Link to="/admin" className="block px-4 py-3 font-medium hover:opacity-90" onClick={() => setIsMobileMenuOpen(false)}>
-                  Dashboard
-                </Link>
-              )}
+              <Link to="/admin" className="block px-4 py-3 font-medium hover:opacity-90" onClick={() => setIsMobileMenuOpen(false)}>
+                {isAdmin ? 'Dashboard' : 'Admin Login'}
+              </Link>
               <div className="px-4 py-3 border-t border-current/10">
                 <LanguageSelector dark={isTransparentPage && !isSticky} />
               </div>

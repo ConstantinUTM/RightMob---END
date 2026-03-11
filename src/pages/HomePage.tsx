@@ -7,6 +7,7 @@ import { getRecentReviews } from '../services/galleryService';
 import { Product } from '../data/products';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
+import { useSiteContent } from '../contexts/SiteContentContext';
 import { getUploadsBase } from '../lib/api';
 import { CATEGORY_IMAGES, CATEGORY_IMAGE_FALLBACKS } from '../config/categoryImages';
 import heroImageFallback from '../../images/IMG_9859.JPG';
@@ -39,8 +40,15 @@ const HERO_IMAGE_PUBLIC = '/images/IMG_9859.JPG';
 // Hero Section
 const HeroSection: React.FC = () => {
   const { t } = useLanguage();
-  const [heroSrc, setHeroSrc] = useState(HERO_IMAGE_PUBLIC);
+  const { getImageOverride } = useSiteContent();
+  const heroImage = getImageOverride('home.heroImage', HERO_IMAGE_PUBLIC);
+  const [heroSrc, setHeroSrc] = useState(heroImage);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    setHeroSrc(heroImage);
+    setImageLoaded(false);
+  }, [heroImage]);
 
   return (
     <section className="relative h-screen flex items-center justify-center overflow-hidden">
@@ -62,7 +70,7 @@ const HeroSection: React.FC = () => {
           className={`w-full h-full object-cover transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="eager"
           decoding="async"
-          fetchPriority="high"
+          fetchpriority="high"
           onLoad={() => setImageLoaded(true)}
           onError={() => setHeroSrc(heroImageFallback)}
         />
@@ -187,8 +195,11 @@ const HeroSection: React.FC = () => {
 
 const VideoSection: React.FC = () => {
   const { t } = useLanguage();
+  const { getImageOverride } = useSiteContent();
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const videoSrc = getImageOverride('home.videoFile', '/images/video/home.mp4');
+  const videoPoster = getImageOverride('home.videoPoster', '/images/IMG_9859.JPG');
   return (
     <section ref={ref} className="relative py-24 md:py-32 bg-[#FAFAF9] overflow-hidden">
       {/* Decorative background elements */}
@@ -216,14 +227,14 @@ const VideoSection: React.FC = () => {
                     if (el && isInView) el.play().catch(() => {});
                   }}
                   className="w-full h-full object-cover"
-                  src="/images/video/home.mp4"
+                  src={videoSrc}
                   autoPlay
                   muted
                   controls
                   playsInline
                   loop
                   preload="auto"
-                  poster="/images/IMG_9859.JPG"
+                  poster={videoPoster}
                 />
               </div>
             </div>
@@ -250,29 +261,28 @@ const VideoSection: React.FC = () => {
             <div className="flex gap-12 mb-12">
               <div>
                 <p className="text-4xl lg:text-5xl font-serif font-bold text-[#0a0a0a] tracking-tight">
-                  500<span className="text-[#2563eb] font-light">+</span>
+                  500<span className="text-[#0a0a0a] font-light">+</span>
                 </p>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-400 mt-2 font-medium">{t('videoSection.stat1Label')}</p>
               </div>
               <div className="w-px bg-gradient-to-b from-transparent via-neutral-200 to-transparent" />
               <div>
                 <p className="text-4xl lg:text-5xl font-serif font-bold text-[#0a0a0a] tracking-tight">
-                  100<span className="text-amber-500 font-light">%</span>
+                  100<span className="text-[#0a0a0a] font-light">%</span>
                 </p>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-400 mt-2 font-medium">{t('videoSection.stat2Label')}</p>
               </div>
             </div>
 
-            <Link
-              to="/despre"
-              className="group inline-flex items-center gap-2 text-sm font-semibold text-[#dc2626] hover:text-[#b91c1c] transition-colors"
-            >
-              {t('nav.about')}
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-
-            {/* Brand signature */}
-            <div className="mt-14 flex items-center gap-4">
+            {/* About + Brand signature */}
+            <div className="mt-14 flex items-center gap-4 flex-wrap">
+              <Link
+                to="/despre"
+                className="group inline-flex items-center gap-2 text-sm font-semibold text-[#0a0a0a] hover:text-black transition-colors"
+              >
+                {t('nav.about')}
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </Link>
               <div className="w-10 h-px bg-neutral-300" />
               <span className="text-[10px] uppercase tracking-[0.3em] font-semibold">
                 <span className="text-[#2563eb]">RIGHT</span><span className="text-[#dc2626]">MOB</span>
@@ -515,7 +525,7 @@ const TestimonialsSection: React.FC = () => {
     productName_en?: string;
     productName_ru?: string;
     productImage: string;
-    review: { id?: string; text: string; text_ro?: string; text_en?: string; text_ru?: string; author?: string; date?: string; source?: string };
+    review: { id?: string; text: string; text_ro?: string; text_en?: string; text_ru?: string; rating?: number; author?: string; date?: string; source?: string };
   }>>([]);
 
   useEffect(() => {
@@ -523,7 +533,7 @@ const TestimonialsSection: React.FC = () => {
   }, []);
 
   const uploadsBase = getUploadsBase();
-  const displayItems = recentReviews.length > 0 ? recentReviews : [];
+  const displayItems = recentReviews.length > 0 ? recentReviews.slice(0, 6) : [];
 
   return (
     <section ref={ref} className="py-32 bg-gradient-to-b from-blue-50/30 to-white relative overflow-hidden">
@@ -563,7 +573,10 @@ const TestimonialsSection: React.FC = () => {
                 >
                   <div className="flex space-x-1 mb-4">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-blue-500 text-blue-500" />
+                      <Star
+                        key={i}
+                        className={`w-5 h-5 ${i < Math.max(1, Math.min(5, Number(item.review.rating) || 5)) ? 'fill-blue-500 text-blue-500' : 'text-blue-200'}`}
+                      />
                     ))}
                   </div>
                   {item.productName && (

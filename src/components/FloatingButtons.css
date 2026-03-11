@@ -76,21 +76,21 @@
 
 /* Culori mai saturate, glass vizibil */
 .bloom-button.whatsapp-bloom .button-container-main {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%),
-              radial-gradient(circle at 30% 30%, rgba(72, 207, 93, 0.7) 0%, rgba(22, 163, 74, 0.8) 100%);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.14) 0%, rgba(220, 38, 38, 0.1) 100%),
+              radial-gradient(circle at 30% 30%, rgba(74, 222, 128, 0.78) 0%, rgba(21, 128, 61, 0.82) 100%);
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
 .bloom-button.whatsapp-bloom .button-inner {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(134, 239, 172, 0.3) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(187, 247, 208, 0.2) 100%);
 }
 
 .bloom-button.viber-bloom .button-container-main {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%),
-              radial-gradient(circle at 30% 30%, rgba(167, 139, 250, 0.7) 0%, rgba(124, 58, 237, 0.8) 100%);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.14) 0%, rgba(220, 38, 38, 0.1) 100%),
+              radial-gradient(circle at 30% 30%, rgba(196, 181, 253, 0.8) 0%, rgba(109, 40, 217, 0.8) 100%);
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
 .bloom-button.viber-bloom .button-inner {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(196, 181, 253, 0.3) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(221, 214, 254, 0.2) 100%);
 }
 
 .bloom-button.instagram-bloom .button-container-main {
@@ -110,11 +110,11 @@
 }
 
 .bloom-button.gmail-bloom .button-container-main {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.6) 0%, rgba(220, 38, 38, 0.7) 100%);
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.62) 0%, rgba(220, 38, 38, 0.74) 100%);
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
 .bloom-button.gmail-bloom .button-inner {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(254, 202, 202, 0.25) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(254, 226, 226, 0.18) 100%);
 }
 
 /* SVG Icon */

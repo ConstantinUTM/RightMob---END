@@ -253,14 +253,21 @@ const GalleryPage: React.FC = () => {
   );
 };
 
-const GalleryCard: React.FC<{
+type GalleryCardProps = {
   item: any; idx: number; total: number;
   toUrl: (u: string) => string; categoryLabel: (c: string) => string;
   language: string; t: (k: string) => string;
-}> = ({ item, idx, total, toUrl, categoryLabel, language, t }) => {
+};
+const GalleryCard = React.forwardRef<HTMLDivElement, GalleryCardProps>(
+  ({ item, idx, total, toUrl, categoryLabel, language, t }, ref) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const isBlue = idx % 2 === 0;
+  const setRefs = useCallback((node: HTMLDivElement | null) => {
+    (cardRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  }, [ref]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!cardRef.current || !glowRef.current) return;
@@ -284,7 +291,7 @@ const GalleryCard: React.FC<{
 
   return (
     <motion.div
-      ref={cardRef}
+      ref={setRefs}
       layout
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -324,6 +331,7 @@ const GalleryCard: React.FC<{
       </Link>
     </motion.div>
   );
-};
+});
+GalleryCard.displayName = 'GalleryCard';
 
 export default GalleryPage;

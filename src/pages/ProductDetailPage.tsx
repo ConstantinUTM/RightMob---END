@@ -30,6 +30,8 @@ const ProductDetailPage: React.FC = () => {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
+  const [commentTitle, setCommentTitle] = useState('');
+  const [commentRating, setCommentRating] = useState(5);
   const [commentAuthor, setCommentAuthor] = useState('');
   const [commentIsOwner, setCommentIsOwner] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
@@ -464,6 +466,24 @@ const ProductDetailPage: React.FC = () => {
                   <ul className="space-y-4 mb-8">
                     {reviewList.map((r, i) => (
                       <li key={r.id || i} className="p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1" aria-label={`Rating: ${r.rating || 5}/5`}>
+                            {[...Array(5)].map((_, starIndex) => (
+                              <Star
+                                key={starIndex}
+                                className={`w-4 h-4 ${(r.rating || 5) > starIndex ? 'fill-amber-400 text-amber-400' : 'text-neutral-300'}`}
+                              />
+                            ))}
+                          </div>
+                          {r.source === 'owner' && (
+                            <span className="text-[11px] font-medium px-2 py-1 rounded-full bg-primary-50 text-primary-700">
+                              Owner
+                            </span>
+                          )}
+                        </div>
+                        {r.title ? (
+                          <p className="text-dark-900 font-semibold mb-1">{r.title}</p>
+                        ) : null}
                         <p className="text-dark-700 leading-relaxed mb-2">{r.text}</p>
                         <div className="flex items-center justify-between text-sm text-dark-500">
                           <span className="font-medium">{r.author || t('productDetail.authorPlaceholder')}</span>
@@ -490,11 +510,15 @@ const ProductDetailPage: React.FC = () => {
                       try {
                         await addReview(String(product.id), {
                           text: commentText.trim(),
+                          title: commentTitle.trim() || undefined,
+                          rating: commentRating,
                           author: commentAuthor.trim() || undefined,
                           source: commentIsOwner ? 'owner' : 'visitor',
                           lang: language,
                         });
                         setCommentText('');
+                        setCommentTitle('');
+                        setCommentRating(5);
                         setCommentAuthor('');
                         setReviewSent(true);
                         const all = await getAllProducts();
@@ -509,6 +533,36 @@ const ProductDetailPage: React.FC = () => {
                     }}
                     className="space-y-4"
                   >
+                    <div className="p-4 rounded-xl border border-neutral-200 bg-neutral-50/50">
+                      <p className="block text-sm font-medium text-dark-700 mb-2">{t('productDetail.ratingLabel')}</p>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setCommentRating(value)}
+                            className="p-1.5 rounded-md hover:bg-neutral-100 transition-colors"
+                            aria-label={`${value} stars`}
+                          >
+                            <Star
+                              className={`w-6 h-6 ${value <= commentRating ? 'fill-amber-400 text-amber-400' : 'text-neutral-300'}`}
+                            />
+                          </button>
+                        ))}
+                        <span className="ml-2 text-sm text-dark-600 font-medium">{commentRating}/5</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-dark-700 mb-1">{t('productDetail.reviewTitleLabel')}</label>
+                      <input
+                        type="text"
+                        value={commentTitle}
+                        onChange={(e) => setCommentTitle(e.target.value)}
+                        className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500"
+                        placeholder={t('productDetail.reviewTitlePlaceholder')}
+                        maxLength={120}
+                      />
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-dark-700 mb-1">{t('productDetail.addComment')}</label>
                       <textarea
@@ -519,6 +573,7 @@ const ProductDetailPage: React.FC = () => {
                         placeholder={t('productDetail.addComment')}
                         required
                       />
+                      <p className="mt-1 text-xs text-dark-500">{t('productDetail.reviewDetailsHint')}</p>
                     </div>
                     <div>
                       <input

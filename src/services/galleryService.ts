@@ -130,7 +130,7 @@ export async function deleteImage(id: string, token?: string) {
 /** Adaugă un comentariu/recenzie la un item (vizitator sau proprietar). */
 export async function addReview(
   itemId: string,
-  data: { text: string; author?: string; source?: 'owner' | 'visitor'; lang?: string }
+  data: { text: string; title?: string; rating?: number; author?: string; source?: 'owner' | 'visitor'; lang?: string }
 ) {
   const base = getGalleryApiBase();
   const res = await fetch(`${base}/api/gallery/${encodeURIComponent(String(itemId))}/reviews`, {
@@ -149,8 +149,21 @@ export async function addReview(
 export async function getRecentReviews(limit = 6): Promise<Array<{
   productId: string;
   productName: string;
+  productName_en?: string;
+  productName_ru?: string;
   productImage: string;
-  review: { id?: string; text: string; author?: string; date?: string; source?: string };
+  review: {
+    id?: string;
+    title?: string;
+    text: string;
+    text_ro?: string;
+    text_en?: string;
+    text_ru?: string;
+    rating?: number;
+    author?: string;
+    date?: string;
+    source?: string;
+  };
 }>> {
   const base = getGalleryApiBase();
   const res = await fetch(`${base}/api/reviews/recent?limit=${limit}`);

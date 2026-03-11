@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Plus, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSiteContent } from '../contexts/SiteContentContext';
 
 const ACCENT = '#374151';
 const RED = '#dc2626';
@@ -12,16 +13,17 @@ const WARM_GREY = '#5c5c5c';
 
 const AboutPage: React.FC = () => {
   const { t } = useLanguage();
+  const { getImageOverride } = useSiteContent();
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const aboutImages = [
-    '/images/about/about-1.jpg',
-    '/images/about/about-2.jpg',
-    '/images/about/about-3.jpg',
-    '/images/IMG_9859.JPG',
-    '/images/IMG_9872.JPG',
+    getImageOverride('about.sectionImage1', '/images/about/about-1.jpg'),
+    getImageOverride('about.heroImage', '/images/about/about-2.jpg'),
+    getImageOverride('about.sectionImage3', '/images/about/about-3.jpg'),
+    getImageOverride('about.fallbackImage1', '/images/IMG_9859.JPG'),
+    getImageOverride('about.mainImage', '/images/IMG_9872.JPG'),
   ];
   const fallbackImages = ['/images/IMG_9859.JPG', '/images/IMG_9872.JPG', '/images/IMG_9859.JPG'];
 
@@ -42,10 +44,10 @@ const AboutPage: React.FC = () => {
         className="relative text-white py-10 sm:py-14 px-4 sm:px-6 overflow-hidden"
       >
         <img
-          src="/images/about/about-2.jpg"
+          src={aboutImages[1]}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
-          fetchPriority="high"
+          fetchpriority="high"
           decoding="async"
           onError={(e) => { (e.target as HTMLImageElement).src = '/images/IMG_9872.JPG'; }}
         />
@@ -77,7 +79,7 @@ const AboutPage: React.FC = () => {
             </div>
 
             {/* Coloana dreapta – două imagini mai mari, din uploads + folder */}
-            <div className="flex flex-wrap items-end justify-end gap-4 sm:gap-5 lg:gap-6">
+            <div className="flex flex-wrap items-end justify-end gap-4 sm:gap-5 lg:gap-6 lg:mt-12">
               <div className="w-44 sm:w-56 lg:w-64 aspect-[3/4] rounded-xl overflow-hidden shadow-2xl flex-shrink-0 ring-1 ring-white/10">
                 <img
                   src={aboutImages[0]}

@@ -1,18 +1,22 @@
-# node_modules
-# server/data.sqlite
-# dist
-# dist-ssr
-# .env
-# .env.example
-# *.local
+node_modules
+server/data.sqlite
+server/data.sqlite-shm
+server/data.sqlite-wal
+server/logs
+dist
+dist-ssr
+.env
+.env.example
+*.local
+server/adminSettings.json
 
-# # Editor directories and files
-# .vscode/*
-# "!.vscode/extensions.json"
-# .idea
-# .DS_Store
-# *.suo
-# *.ntvs*
-# *.njsproj
-# *.sln
-# *.sw?
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

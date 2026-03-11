@@ -108,10 +108,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          const msg = data?.error || (response.status === 500 ? 'Eroare server. Verifică consola serverului.' : 'Email sau parolă incorectă');
+          const msg = data?.error || (response.status === 429 ? 'Prea multe încercări.' : response.status === 500 ? 'Eroare server.' : 'Credențiale invalide');
           throw new Error(msg);
         }
-        const token = data.token || 'admin-session-token-' + Date.now();
+        const token = data.token;
+        if (!token) throw new Error('Eroare la autentificare');
         
         // Salvează token în sessionStorage (nu localStorage!)
         storeAdminToken(token);
@@ -137,6 +138,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     if (USE_MOCK_AUTH) {
+      const token = getAdminToken();
+      if (token) {
+        try {
+          await fetch(`${getApiBase()}/api/admin/logout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+          });
+        } catch (_) {}
+      }
       clearAdminToken();
       try { sessionStorage.removeItem('mockAdminUser'); } catch (e) { /* ignore */ }
       setCurrentUser(null);

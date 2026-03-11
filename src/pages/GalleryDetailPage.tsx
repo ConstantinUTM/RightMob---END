@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles, X, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Sparkles, X, ChevronLeft, ChevronRight, MessageSquare, Star } from 'lucide-react';
 import galleryService from '../services/galleryService';
 import categoriesService from '../services/categoriesService';
 import { CATEGORY_LABELS } from '../components/Breadcrumbs';
@@ -26,6 +26,7 @@ const GalleryDetailPage: React.FC = () => {
   const [categoryList, setCategoryList] = useState<{ id: string; label: string }[]>([]);
   const [commentText, setCommentText] = useState('');
   const [commentAuthor, setCommentAuthor] = useState('');
+  const [commentRating, setCommentRating] = useState(5);
   const [commentIsOwner, setCommentIsOwner] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewSent, setReviewSent] = useState(false);
@@ -293,6 +294,14 @@ const GalleryDetailPage: React.FC = () => {
                     <ul className="space-y-6 max-w-2xl mb-8">
                       {visibleReviews.map((rev: any, i: number) => (
                         <li key={rev.id || i} className="pl-4 border-l-2 border-neutral-200">
+                          <div className="flex items-center gap-1 mb-2" aria-label={`Rating ${rev.rating || 5} din 5`}>
+                            {Array.from({ length: 5 }, (_, starIdx) => (
+                              <Star
+                                key={starIdx}
+                                className={`w-4 h-4 ${(starIdx + 1) <= (rev.rating || 5) ? 'text-amber-400 fill-amber-400' : 'text-neutral-300'}`}
+                              />
+                            ))}
+                          </div>
                           <p className="text-neutral-700 leading-relaxed whitespace-pre-line">{(language === 'en' ? rev.text_en : language === 'ru' ? rev.text_ru : rev.text_ro) || rev.text}</p>
                           {(rev.author || rev.date) && (
                             <p className="text-sm text-neutral-500 mt-2">
@@ -316,12 +325,14 @@ const GalleryDetailPage: React.FC = () => {
                         try {
                           await galleryService.addReview(id, {
                             text: commentText.trim(),
+                            rating: commentRating,
                             author: commentAuthor.trim() || undefined,
                             source: commentIsOwner ? 'owner' : 'visitor',
                             lang: language,
                           });
                           setCommentText('');
                           setCommentAuthor('');
+                          setCommentRating(5);
                           setReviewSent(true);
                           const updated = await galleryService.getGalleryItemById(id);
                           if (updated) setItem(updated);
@@ -334,6 +345,27 @@ const GalleryDetailPage: React.FC = () => {
                       }}
                       className="space-y-4 max-w-2xl"
                     >
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">{t('productDetail.ratingLabel')}</label>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }, (_, i) => {
+                            const value = i + 1;
+                            const active = value <= commentRating;
+                            return (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() => setCommentRating(value)}
+                                className="p-1 rounded hover:bg-amber-50 transition-colors"
+                                aria-label={`Alege ${value} stele`}
+                              >
+                                <Star className={`w-6 h-6 ${active ? 'text-amber-400 fill-amber-400' : 'text-neutral-300'}`} />
+                              </button>
+                            );
+                          })}
+                          <span className="text-xs text-neutral-500 ml-2">{commentRating}/5</span>
+                        </div>
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-neutral-700 mb-1">{t('productDetail.addComment')}</label>
                         <textarea

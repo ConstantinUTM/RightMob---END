@@ -5,26 +5,87 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
-import { translateToAll, translateText, translateFromAny } from './translations.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { translateToAll, translateText, translateFromAny, detectLanguage } from './translations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Încarcă variabilele din .env (fără dotenv)
+const envPath = path.join(__dirname, '..', '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim();
+    if (!process.env[key]) process.env[key] = val;
+  }
+  console.log('[API] .env încărcat.');
+}
+
 const app = express();
 const PORT = 3001;
+const BCRYPT_ROUNDS = 12;
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+if (!process.env.JWT_SECRET) {
+  console.warn('[API] JWT_SECRET nu e setat în .env – folosesc secret temporar (token-urile expiră la repornire).');
+}
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3001')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+const tokenBlacklist = new Set();
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 15MB
+const SAFE_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+const MAGIC = {
+  jpeg: Buffer.from([0xff, 0xd8, 0xff]),
+  png: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  webp: Buffer.from([0x52, 0x49, 0x46, 0x46]), // RIFF, then later WEBP
+  gif: Buffer.from([0x47, 0x49, 0x46, 0x38]), // GIF8
+};
 const PRODUCTS_FILE = path.join(__dirname, 'products.json');
 const MESSAGES_FILE = path.join(__dirname, 'messages.json');
 const ADMIN_SETTINGS_FILE = path.join(__dirname, 'adminSettings.json');
 const GALLERY_FILE = path.join(__dirname, 'gallery.json');
 const CATEGORIES_FILE = path.join(__dirname, 'categories.json');
 const ANALYTICS_FILE = path.join(__dirname, 'analytics.json');
+const SITE_CONTENT_FILE = path.join(__dirname, 'siteContent.json');
 const UPLOADS_DIR = path.join(__dirname, '..', 'public', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   console.log('[API] Director public/uploads creat.');
 }
+const LOGS_DIR = path.join(__dirname, 'logs');
+const SECURITY_LOG_FILE = path.join(LOGS_DIR, 'security.log');
+if (!fs.existsSync(LOGS_DIR)) {
+  fs.mkdirSync(LOGS_DIR, { recursive: true });
+  console.log('[API] Director logs creat.');
+}
+const getClientIp = (req) => req.ip || req.socket?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown';
+const secureLog = (event, req, extra = {}) => {
+  const line = JSON.stringify({
+    ts: new Date().toISOString(),
+    event,
+    ip: getClientIp(req),
+    ...extra
+  }) + '\n';
+  try {
+    fs.appendFileSync(SECURITY_LOG_FILE, line);
+  } catch (e) {
+    console.error('[SEC] Eroare scriere log:', e?.message);
+  }
+  console.log('[SEC]', event, getClientIp(req), extra?.email || extra?.message || '');
+};
 
 // Bază de date: PostgreSQL (DATABASE_URL) sau SQLite – API async
 let dbGallery, dbMessages, dbCategories, dbAdminSettings, dbAnalytics, useDb;
@@ -40,35 +101,54 @@ try {
   useDb = () => false;
 }
 
-const isValidAdminToken = (token) => token && (token === 'admin-secret-token' || String(token).startsWith('admin-session-token-'));
-
-// Simple rate limiting
-const rateLimitMap = new Map();
-const rateLimit = (req, res, next) => {
-  const ip = req.ip;
-  const now = Date.now();
-  const windowMs = 60 * 1000; // 1 minute
-  const maxRequests = 10;
-
-  if (!rateLimitMap.has(ip)) {
-    rateLimitMap.set(ip, []);
-  }
-
-  const requests = rateLimitMap.get(ip).filter(time => now - time < windowMs);
-  requests.push(now);
-  rateLimitMap.set(ip, requests);
-
-  if (requests.length > maxRequests) {
-    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
-  }
-
-  next();
+const isValidImageBuffer = (buffer) => {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return false;
+  if (buffer.compare(MAGIC.jpeg, 0, 3, 0, 3) === 0) return true;
+  if (buffer.compare(MAGIC.png, 0, 8, 0, 8) === 0) return true;
+  if (buffer.compare(MAGIC.gif, 0, 4, 0, 4) === 0) return true;
+  if (buffer.compare(MAGIC.webp, 0, 4, 0, 4) === 0 && buffer.length >= 12 && buffer.toString('ascii', 8, 12) === 'WEBP') return true;
+  return false;
+};
+const sanitizeImageFilename = (fname) => {
+  const base = (fname || 'image').replace(/\.\.\/?/g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const ext = path.extname(base).toLowerCase();
+  return SAFE_IMAGE_EXTENSIONS.has(ext) ? base : base.replace(/\.[^.]+$/, '') || 'image';
+};
+const isPasswordHash = (str) => typeof str === 'string' && str.startsWith('$2b$');
+const validatePasswordComplexity = (password) => {
+  if (typeof password !== 'string' || password.length < 8) return false;
+  if (!/[A-Z]/.test(password)) return false;
+  if (!/[a-z]/.test(password)) return false;
+  if (!/[0-9]/.test(password)) return false;
+  if (!/[^a-zA-Z0-9]/.test(password)) return false; // cel puțin un simbol
+  return true;
 };
 
-// Admin auth + CSRF guard (Origin/Referer when present)
+const isValidAdminToken = (token) => {
+  if (!token || typeof token !== 'string') return false;
+  if (tokenBlacklist.has(token)) return false;
+  try {
+    jwt.verify(token, JWT_SECRET);
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+
+// Curățare blacklist la fiecare oră (token-uri expirate)
+setInterval(() => {
+  for (const t of tokenBlacklist) {
+    try {
+      const payload = jwt.decode(t);
+      if (payload && payload.exp && payload.exp < Date.now() / 1000) tokenBlacklist.delete(t);
+    } catch (_) {}
+  }
+}, 60 * 60 * 1000);
+
+// Admin auth + CSRF guard
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
-  return /^https?:\/\/(localhost|127\.0\.0\.1|[\d.]+|[a-zA-Z0-9.-]+):(5173|5174|5175)$/.test(origin);
+  return ALLOWED_ORIGINS.some((o) => origin === o || origin.startsWith(o));
 };
 
 const requireAdmin = (req, res, next) => {
@@ -86,13 +166,61 @@ const requireAdmin = (req, res, next) => {
 
 
 // Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (ALLOWED_ORIGINS.some((o) => origin === o || origin.startsWith(o))) return cb(null, true);
+    cb(null, false);
+  },
+  credentials: true
+}));
+app.use(express.json({ limit: '20mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 app.use('/images', express.static(path.join(__dirname, '..', 'public', 'images')));
 app.get('/favicon.png', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'favicon.png'));
 });
+
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Prea multe încercări, reîncearcă în 15 minute' },
+  standardHeaders: true,
+  handler: (req, res) => {
+    secureLog('rate_limit_login', req, { message: 'Prea multe încercări login' });
+    res.status(429).json({ error: 'Prea multe încercări, reîncearcă în 15 minute' });
+  }
+});
+app.use('/api/admin/login', loginRateLimiter);
+
+const messagesRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: 'Prea multe cereri. Încearcă mai târziu.' },
+  standardHeaders: true
+});
+app.use('/api/messages', messagesRateLimiter);
+
+const translateRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Prea multe cereri de traducere. Încearcă mai târziu.' },
+  standardHeaders: true
+});
+app.use('/api/translate', translateRateLimiter);
+
+const emailTrackRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Prea multe cereri. Încearcă mai târziu.' },
+  standardHeaders: true
+});
+app.use('/api/email-track', emailTrackRateLimiter);
 
 // Health check – fără fișiere, doar răspunde 200 (pentru a verifica că serverul și proxy merg)
 app.get('/api/health', (req, res) => {
@@ -254,10 +382,10 @@ const writeMessages = async (messages) => {
   return writeMessagesFile(messages);
 };
 
-// Setări implicite dacă fișierul lipsește sau e invalid
+// Setări implicite – fără parolă validă (configurare manuală necesară dacă fișierul lipsește)
 const DEFAULT_ADMIN_SETTINGS = {
   profile: { username: 'Admin', email: 'admin@luxmobila.com', profileImage: '' },
-  credentials: { email: 'admin@luxmobila.com', password: 'admin123', uid: 'mock-admin-uid' },
+  credentials: { email: 'admin@luxmobila.com', password: '', uid: 'mock-admin-uid' },
   notificationsEmail: '',
   notificationsPhone: '',
   features: { tryInMyRoomEnabled: true }
@@ -441,10 +569,6 @@ const writeAnalytics = async (data) => {
   return writeAnalyticsFile(data);
 };
 
-const getClientIp = (req) => {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || req.ip || '';
-};
-
 // Ensure uploads dir exists
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -479,8 +603,8 @@ app.get('/api/products/:id', (req, res) => {
   }
 });
 
-// POST - Adaugă un produs nou
-app.post('/api/products', (req, res) => {
+// POST - Adaugă un produs nou (admin only)
+app.post('/api/products', requireAdmin, (req, res) => {
   const products = readProducts();
   const newProduct = {
     ...req.body,
@@ -496,8 +620,8 @@ app.post('/api/products', (req, res) => {
   }
 });
 
-// PUT - Actualizează un produs
-app.put('/api/products/:id', (req, res) => {
+// PUT - Actualizează un produs (admin only)
+app.put('/api/products/:id', requireAdmin, (req, res) => {
   const products = readProducts();
   const index = products.findIndex(p => p.id === req.params.id);
   
@@ -519,8 +643,8 @@ app.put('/api/products/:id', (req, res) => {
   }
 });
 
-// DELETE - Șterge un produs
-app.delete('/api/products/:id', (req, res) => {
+// DELETE - Șterge un produs (admin only)
+app.delete('/api/products/:id', requireAdmin, (req, res) => {
   const products = readProducts();
   const filteredProducts = products.filter(p => p.id !== req.params.id);
   
@@ -729,13 +853,38 @@ function translateReviewText(originalText, sourceLang) {
   return translateFromAny(originalText, sourceLang);
 }
 
+// Traducere recenzie cu fallback MyMemory când dicționarul local nu are cuvântul (orice limbă → ro, en, ru)
+async function translateReviewTextAsync(originalText, sourceLang) {
+  const trimmed = (originalText || '').trim();
+  if (!trimmed) return { ro: '', en: '', ru: '' };
+  const src = sourceLang || detectLanguage(trimmed);
+  let out = translateFromAny(trimmed, src);
+  for (const target of ['ro', 'en', 'ru']) {
+    if (target === src) continue;
+    const val = out[target];
+    if (!val || val === trimmed || val.toLowerCase() === trimmed.toLowerCase()) {
+      try {
+        const translated = await translateWithMyMemory(trimmed, src, target);
+        if (translated && translated.trim() && translated !== trimmed) out[target] = translated.trim();
+      } catch (e) {
+        console.warn('[translate] MyMemory fallback failed:', e?.message);
+      }
+    }
+  }
+  out.ro = out.ro || trimmed;
+  out.en = out.en || trimmed;
+  out.ru = out.ru || trimmed;
+  return out;
+}
+
 // POST - Adaugă un comentariu/recenzie la un item din galerie (public – vizitatori sau proprietar)
 app.post('/api/gallery/:id/reviews', express.json(), async (req, res) => {
   try {
-    const { text, author, source, lang } = req.body || {};
+    const { text, title, rating, author, source, lang } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim()) {
       return res.status(400).json({ error: 'Textul recenziei este obligatoriu' });
     }
+    const numericRating = Math.max(1, Math.min(5, Number(rating) || 5));
     const gallery = await readGallery();
     const idParam = String(req.params.id || '').trim();
     const index = gallery.findIndex((it) => String(it.id) === idParam);
@@ -745,14 +894,16 @@ app.post('/api/gallery/:id/reviews', express.json(), async (req, res) => {
 
     const trimmed = text.trim();
     const sourceLang = ['ro', 'en', 'ru'].includes(lang) ? lang : undefined;
-    const translated = translateReviewText(trimmed, sourceLang);
+    const translated = await translateReviewTextAsync(trimmed, sourceLang);
 
     const review = {
       id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      title: (title != null ? String(title) : '').trim(),
       text: trimmed,
       text_ro: translated.ro,
       text_en: translated.en,
       text_ru: translated.ru,
+      rating: numericRating,
       author: (author != null ? String(author) : '').trim(),
       date: new Date().toISOString(),
       visible: true,
@@ -786,7 +937,18 @@ app.get('/api/reviews/recent', async (req, res) => {
           productName_en: it.description_en || it.description || '',
           productName_ru: it.description_ru || it.description || '',
           productImage: itemUrl,
-          review: { id: r.id, text: r.text, text_ro: r.text_ro || r.text, text_en: r.text_en || r.text, text_ru: r.text_ru || r.text, author: r.author, date: r.date, source: r.source }
+          review: {
+            id: r.id,
+            title: r.title || '',
+            text: r.text,
+            text_ro: r.text_ro || r.text,
+            text_en: r.text_en || r.text,
+            text_ru: r.text_ru || r.text,
+            rating: Math.max(1, Math.min(5, Number(r.rating) || 5)),
+            author: r.author,
+            date: r.date,
+            source: r.source
+          }
         });
       }
     });
@@ -809,7 +971,19 @@ app.get('/api/admin/reviews', async (req, res) => {
         productId: it.id,
         productName: it.description || '',
         productImage: it.url || '',
-        review: { id: r.id, text: r.text, text_ro: r.text_ro || r.text, text_en: r.text_en || r.text, text_ru: r.text_ru || r.text, author: r.author, date: r.date, visible: r.visible !== false, source: r.source }
+        review: {
+          id: r.id,
+          title: r.title || '',
+          text: r.text,
+          text_ro: r.text_ro || r.text,
+          text_en: r.text_en || r.text,
+          text_ru: r.text_ru || r.text,
+          rating: Math.max(1, Math.min(5, Number(r.rating) || 5)),
+          author: r.author,
+          date: r.date,
+          visible: r.visible !== false,
+          source: r.source
+        }
       });
     });
   });
@@ -900,7 +1074,7 @@ app.delete('/api/gallery/:id/reviews/:reviewId', async (req, res) => {
 // POST - Migrează produsele existente în galerie (admin only)
 app.post('/api/admin/migrate-products-to-gallery', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
-  if (!adminToken) return res.status(401).json({ error: 'Unauthorized - token missing' });
+  if (!isValidAdminToken(adminToken)) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     const products = readProducts();
@@ -949,8 +1123,8 @@ app.post('/api/admin/migrate-products-to-gallery', async (req, res) => {
 // POST - Încarcă o imagine în galerie (admin only)
 app.post('/api/gallery/upload', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
-  if (!adminToken) {
-    return res.status(401).json({ error: 'Unauthorized - token missing' });
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
@@ -981,14 +1155,19 @@ app.post('/api/gallery/upload', async (req, res) => {
         base64Data = payload.substring(commaIndex + 1);
       }
       const buffer = Buffer.from(base64Data, 'base64');
-      const safeName = Date.now() + '-' + fname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      if (buffer.length > MAX_UPLOAD_BYTES) throw new Error('Fișier prea mare (max 15MB)');
+      if (!isValidImageBuffer(buffer)) throw new Error('Format imagine invalid');
+      const safeBase = sanitizeImageFilename(fname);
+      const safeName = Date.now() + '-' + (safeBase || 'image').replace(/[^a-zA-Z0-9._-]/g, '_');
+      const ext = path.extname(safeName).toLowerCase();
+      const finalName = SAFE_IMAGE_EXTENSIONS.has(ext) ? safeName : safeName + '.jpg';
       const dir = useSubDir ? subDir : UPLOADS_DIR;
-      const savePath = path.join(dir, safeName);
+      const savePath = path.join(dir, finalName);
       if (useSubDir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(savePath, buffer);
-      const relativePath = useSubDir ? path.join(categorySlug, projectSlug, safeName) : safeName;
+      const relativePath = useSubDir ? path.join(categorySlug, projectSlug, finalName) : finalName;
       const url = '/uploads/' + relativePath.replace(/\\/g, '/');
-      return { filename: safeName, url };
+      return { filename: finalName, url };
     };
 
     // save main image (în subfolder categorie/lucrare)
@@ -1097,7 +1276,9 @@ app.put('/api/gallery/:id', async (req, res) => {
     const deleteFileByUrl = (url) => {
       if (!url || !url.startsWith('/uploads/')) return;
       const rel = url.replace(/^\/uploads\/?/, '').replace(/\//g, path.sep);
-      const fullPath = path.join(UPLOADS_DIR, rel);
+      const fullPath = path.resolve(UPLOADS_DIR, rel);
+      // Previne path traversal – nu permite ștergerea în afara UPLOADS_DIR
+      if (!fullPath.startsWith(path.resolve(UPLOADS_DIR))) return;
       if (fs.existsSync(fullPath)) {
         try { fs.unlinkSync(fullPath); } catch (e) { console.warn('Nu am putut șterge fișierul:', e); }
       }
@@ -1119,10 +1300,12 @@ app.put('/api/gallery/:id', async (req, res) => {
         const translated = needsTranslation && textVal ? translateToAll(textVal) : null;
         return {
           id: r.id || `rev_${Date.now()}_${i}`,
+          title: r.title != null ? String(r.title).trim() : '',
           text: textVal,
           text_ro: translated ? translated.ro : (existing?.text_ro || textVal),
           text_en: translated ? translated.en : (existing?.text_en || ''),
           text_ru: translated ? translated.ru : (existing?.text_ru || ''),
+          rating: Math.max(1, Math.min(5, Number(r.rating) || Number(existing?.rating) || 5)),
           author: r.author != null ? String(r.author).trim() : '',
           date: r.date != null ? String(r.date).trim() : '',
           visible: r.visible !== false,
@@ -1164,13 +1347,18 @@ app.put('/api/gallery/:id', async (req, res) => {
         base64Data = payload.substring(commaIndex + 1);
       }
       const buffer = Buffer.from(base64Data, 'base64');
-      const safeName = Date.now() + '-' + (fname || 'image').replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      if (buffer.length > MAX_UPLOAD_BYTES) throw new Error('Fișier prea mare (max 15MB)');
+      if (!isValidImageBuffer(buffer)) throw new Error('Format imagine invalid');
+      const safeBase = sanitizeImageFilename(fname);
+      const safeName = Date.now() + '-' + (safeBase || 'image').replace(/[^a-zA-Z0-9._-]/g, '_');
+      const ext = path.extname(safeName).toLowerCase();
+      const finalName = SAFE_IMAGE_EXTENSIONS.has(ext) ? safeName : safeName + '.jpg';
       if (!fs.existsSync(subDir)) fs.mkdirSync(subDir, { recursive: true });
-      const savePath = path.join(subDir, safeName);
+      const savePath = path.join(subDir, finalName);
       fs.writeFileSync(savePath, buffer);
-      const relativePath = path.join(categorySlug, projectSlug, safeName);
+      const relativePath = path.join(categorySlug, projectSlug, finalName);
       const url = '/uploads/' + relativePath.replace(/\\/g, '/');
-      return { filename: safeName, url };
+      return { filename: finalName, url };
     };
     if (mainImage && mainImage.filename && mainImage.data) {
       try {
@@ -1293,31 +1481,29 @@ app.delete('/api/gallery/:id', async (req, res) => {
     }
 
     const [removed] = gallery.splice(index, 1);
-    // șterge fișierul
-    const filePath = path.join(UPLOADS_DIR, removed.filename);
-    if (fs.existsSync(filePath)) {
-      try { fs.unlinkSync(filePath); } catch (e) { console.warn('Nu am putut șterge fișierul:', e); }
-    }
+    // șterge fișierul (cu protecție path traversal)
+    const safeDelete = (fp) => {
+      const resolved = path.resolve(fp);
+      if (!resolved.startsWith(path.resolve(UPLOADS_DIR))) return;
+      if (fs.existsSync(resolved)) {
+        try { fs.unlinkSync(resolved); } catch (e) { console.warn('Nu am putut șterge fișierul:', e); }
+      }
+    };
+    safeDelete(path.join(UPLOADS_DIR, removed.filename));
 
     // șterge imaginile din detalii dacă există (support multiple images)
     if (Array.isArray(removed.details)) {
       removed.details.forEach(d => {
         // legacy single filename property
         if (d.imageFilename) {
-          const p = path.join(UPLOADS_DIR, d.imageFilename);
-          if (fs.existsSync(p)) {
-            try { fs.unlinkSync(p); } catch (e) { console.warn('Nu am putut șterge imagine detaliu:', e); }
-          }
+          safeDelete(path.join(UPLOADS_DIR, d.imageFilename));
         }
         // images array
         if (Array.isArray(d.images)) {
           d.images.forEach(img => {
             const fname = img.filename || img.imageFilename;
             if (fname) {
-              const p = path.join(UPLOADS_DIR, fname);
-              if (fs.existsSync(p)) {
-                try { fs.unlinkSync(p); } catch (e) { console.warn('Nu am putut șterge imagine detaliu:', e); }
-              }
+              safeDelete(path.join(UPLOADS_DIR, fname));
             }
           });
         }
@@ -1335,8 +1521,8 @@ app.delete('/api/gallery/:id', async (req, res) => {
 // GET - Obține un mesaj după ID (admin only)
 app.get('/api/admin/messages/:id', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
-  if (!adminToken) {
-    return res.status(401).json({ error: 'Unauthorized - token missing' });
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const messages = await readMessages();
@@ -1352,8 +1538,8 @@ app.get('/api/admin/messages/:id', async (req, res) => {
 // PUT - Marchează un mesaj ca citit (admin only)
 app.put('/api/admin/messages/:id/read', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
-  if (!adminToken) {
-    return res.status(401).json({ error: 'Unauthorized - token missing' });
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const messages = await readMessages();
@@ -1392,24 +1578,16 @@ app.delete('/api/admin/messages/:id', async (req, res) => {
   }
 });
 
-// POST - Admin login (acceptă email SAU nume utilizator). Nu aruncă niciodată – răspunde mereu 200/400/401.
+// POST - Admin login (acceptă email SAU nume utilizator). Mesaj generic la eșec.
 app.post('/api/admin/login', async (req, res) => {
   const loginInput = (req.body && (req.body.email != null ? req.body.email : req.body.username));
   const password = (req.body && req.body.password) != null ? String(req.body.password) : '';
 
   if (!loginInput || !password) {
-    return res.status(400).json({ error: 'Utilizator și parolă sunt obligatorii' });
+    return res.status(400).json({ error: 'Credențiale invalide' });
   }
 
   const inputStr = String(loginInput).toLowerCase().trim();
-
-  // Fallback: credențiale implicite (funcționează și fără adminSettings.json)
-  const defaultEmail = 'admin@luxmobila.com';
-  const defaultPass = 'admin123';
-  if (inputStr === defaultEmail.toLowerCase() && password === defaultPass) {
-    const token = 'admin-session-token-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    return res.json({ token, user: { email: defaultEmail, displayName: 'Admin' } });
-  }
 
   let creds = DEFAULT_ADMIN_SETTINGS.credentials;
   let profile = DEFAULT_ADMIN_SETTINGS.profile;
@@ -1425,33 +1603,72 @@ app.post('/api/admin/login', async (req, res) => {
     console.error('Login: citire setări:', e && e.message);
   }
 
-  try {
-    const storedPass = (creds.password != null && String(creds.password).length > 0) ? String(creds.password) : defaultPass;
-    const emailMatch = creds.email && String(creds.email).toLowerCase() === inputStr;
-    const userMatch = profile && profile.username && String(profile.username).toLowerCase() === inputStr;
-
-    if (!emailMatch && !userMatch) {
-      return res.status(401).json({ error: 'Utilizator sau parolă incorectă' });
-    }
-    if (password !== storedPass) {
-      return res.status(401).json({ error: 'Utilizator sau parolă incorectă' });
-    }
-
-    const token = 'admin-session-token-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    return res.json({
-      token,
-      user: {
-        email: (creds && creds.email) ? String(creds.email) : '',
-        displayName: (profile && profile.username) ? String(profile.username) : 'Admin'
-      }
-    });
-  } catch (err) {
-    console.error('Eroare la login:', err && err.message);
-    try { res.status(500).json({ error: 'Eroare server la login' }); } catch (_) {}
+  const storedPass = creds.password != null ? String(creds.password) : '';
+  if (!storedPass || storedPass.length === 0) {
+    return res.status(401).json({ error: 'Credențiale invalide' });
   }
+
+  const emailMatch = creds.email && String(creds.email).toLowerCase() === inputStr;
+  const userMatch = profile && profile.username && String(profile.username).toLowerCase() === inputStr;
+  if (!emailMatch && !userMatch) {
+    return res.status(401).json({ error: 'Credențiale invalide' });
+  }
+
+  let passwordValid = false;
+  if (isPasswordHash(storedPass)) {
+    try {
+      passwordValid = await bcrypt.compare(password, storedPass);
+    } catch (e) {
+      console.error('bcrypt.compare:', e && e.message);
+      return res.status(500).json({ error: 'Credențiale invalide' });
+    }
+  } else {
+    passwordValid = password === storedPass;
+    if (passwordValid) {
+      const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      try {
+        const settings = await readAdminSettings();
+        if (settings && settings.credentials) {
+          settings.credentials.password = hashed;
+          await writeAdminSettings(settings);
+        }
+      } catch (e) {
+        console.error('Migrare parolă bcrypt:', e && e.message);
+      }
+    }
+  }
+
+  if (!passwordValid) {
+    secureLog('login_fail', req, { email: inputStr });
+    return res.status(401).json({ error: 'Credențiale invalide' });
+  }
+
+  const token = jwt.sign(
+    { sub: (creds && creds.uid) || 'admin', email: (creds && creds.email) || '' },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+  secureLog('login_ok', req, { email: (creds && creds.email) || inputStr });
+  return res.json({
+    token,
+    user: {
+      email: (creds && creds.email) ? String(creds.email) : '',
+      displayName: (profile && profile.username) ? String(profile.username) : 'Admin'
+    }
+  });
 });
 
-// POST - Schimbă parola admin (admin only)
+// POST - Logout admin (adaugă token-ul în blacklist)
+app.post('/api/admin/logout', express.json(), (req, res) => {
+  const token = req.headers['x-admin-token'];
+  if (token && typeof token === 'string') {
+    tokenBlacklist.add(token);
+    secureLog('logout', req);
+  }
+  res.json({ message: 'Delogat cu succes' });
+});
+
+// POST - Schimbă parola admin (admin only) – validare complexitate + bcrypt
 app.post('/api/admin/change-password', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) {
@@ -1463,8 +1680,8 @@ app.post('/api/admin/change-password', async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Parola curentă și cea nouă sunt obligatorii' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Parola nouă trebuie să aibă cel puțin 6 caractere' });
+    if (!validatePasswordComplexity(newPassword)) {
+      return res.status(400).json({ error: 'Parola trebuie să aibă minim 8 caractere, o literă mare, o literă mică, o cifră și un simbol' });
     }
 
     const settings = await readAdminSettings();
@@ -1472,13 +1689,24 @@ app.post('/api/admin/change-password', async (req, res) => {
       return res.status(500).json({ error: 'Eroare la citirea setărilor' });
     }
 
-    const stored = settings.credentials.password || '1234567890';
-    if (currentPassword !== stored) {
+    const stored = settings.credentials.password != null ? String(settings.credentials.password) : '';
+    if (!stored) {
       return res.status(401).json({ error: 'Parola curentă este incorectă' });
     }
 
-    settings.credentials.password = newPassword;
+    let currentValid = false;
+    if (isPasswordHash(stored)) {
+      currentValid = await bcrypt.compare(currentPassword, stored);
+    } else {
+      currentValid = currentPassword === stored;
+    }
+    if (!currentValid) {
+      return res.status(401).json({ error: 'Parola curentă este incorectă' });
+    }
+
+    settings.credentials.password = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     if (await writeAdminSettings(settings)) {
+      secureLog('password_changed', req, { message: 'Parolă actualizată' });
       res.json({ message: 'Parolă actualizată cu succes' });
     } else {
       res.status(500).json({ error: 'Eroare la salvarea parolei' });
@@ -1500,8 +1728,37 @@ app.get('/api/admin/settings', async (req, res) => {
   if (!settings) {
     return res.status(500).json({ error: 'Eroare la citirea setărilor' });
   }
+  const credsSafe = settings.credentials && typeof settings.credentials === 'object'
+    ? (() => { const { password, ...r } = settings.credentials; return r; })()
+    : {};
+  res.json({ ...settings, credentials: credsSafe });
+});
 
-  res.json(settings);
+// GET - Loguri securitate (admin only) – ultimele N linii pentru monitorizare
+app.get('/api/admin/logs', async (req, res) => {
+  const adminToken = req.headers['x-admin-token'];
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const n = Math.min(parseInt(req.query.n, 10) || 200, 500);
+  try {
+    if (!fs.existsSync(SECURITY_LOG_FILE)) {
+      return res.json({ lines: [], message: 'Fișier log încă necreat.' });
+    }
+    const raw = fs.readFileSync(SECURITY_LOG_FILE, 'utf8');
+    const lines = raw.trim().split('\n').filter(Boolean).slice(-n);
+    const parsed = lines.map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch (_) {
+        return { raw: l };
+      }
+    });
+    res.json({ lines: parsed });
+  } catch (e) {
+    console.error('Eroare citire log:', e?.message);
+    res.status(500).json({ error: 'Eroare la citirea logurilor' });
+  }
 });
 
 // PUT - Actualizează setările admin (admin only)
@@ -1543,12 +1800,116 @@ app.put('/api/admin/settings', async (req, res) => {
   }
 });
 
+/* ─── Site Content (CMS) ─── */
+const DEFAULT_SITE_CONTENT = { translations: { ro: {}, en: {}, ru: {} }, images: {} };
+const readSiteContent = () => {
+  try {
+    if (!fs.existsSync(SITE_CONTENT_FILE)) {
+      fs.writeFileSync(SITE_CONTENT_FILE, JSON.stringify(DEFAULT_SITE_CONTENT, null, 2));
+      return { ...DEFAULT_SITE_CONTENT };
+    }
+    const raw = fs.readFileSync(SITE_CONTENT_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : { ...DEFAULT_SITE_CONTENT };
+  } catch (e) {
+    console.error('Eroare citire siteContent:', e?.message);
+    return { ...DEFAULT_SITE_CONTENT };
+  }
+};
+const writeSiteContent = (content) => {
+  try {
+    fs.writeFileSync(SITE_CONTENT_FILE, JSON.stringify(content, null, 2));
+    return true;
+  } catch (e) {
+    console.error('Eroare scriere siteContent:', e?.message);
+    return false;
+  }
+};
+
+// GET - Public endpoint for site content overrides
+app.get('/api/site-content', (req, res) => {
+  const content = readSiteContent();
+  res.json(content);
+});
+
+// PUT - Admin only: update site content
+app.put('/api/admin/site-content', (req, res) => {
+  const adminToken = req.headers['x-admin-token'];
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const { translations, images } = req.body || {};
+  if (!translations && !images) {
+    return res.status(400).json({ error: 'Niciun câmp de actualizat' });
+  }
+  const current = readSiteContent();
+  if (translations && typeof translations === 'object') {
+    for (const lang of ['ro', 'en', 'ru']) {
+      if (translations[lang] && typeof translations[lang] === 'object') {
+        if (!current.translations) current.translations = { ro: {}, en: {}, ru: {} };
+        if (!current.translations[lang]) current.translations[lang] = {};
+        Object.assign(current.translations[lang], translations[lang]);
+        // Remove keys set to empty string (revert to default)
+        for (const [k, v] of Object.entries(current.translations[lang])) {
+          if (v === '') delete current.translations[lang][k];
+        }
+      }
+    }
+  }
+  if (images && typeof images === 'object') {
+    if (!current.images) current.images = {};
+    Object.assign(current.images, images);
+    for (const [k, v] of Object.entries(current.images)) {
+      if (v === '') delete current.images[k];
+    }
+  }
+  if (writeSiteContent(current)) {
+    res.json({ message: 'Conținut actualizat', content: current });
+  } else {
+    res.status(500).json({ error: 'Eroare la salvare' });
+  }
+});
+
 // POST - Înregistrează o vizionare (path + ip, opțional geo)
+  // POST - Upload media (imagine/video) pentru site-content (admin)
+  const SAFE_MEDIA_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.mov', '.ogg']);
+  app.post('/api/admin/site-content/upload', async (req, res) => {
+    const adminToken = req.headers['x-admin-token'];
+    if (!isValidAdminToken(adminToken)) return res.status(401).json({ error: 'Unauthorized' });
+    const { filename, data } = req.body || {};
+    if (!filename || !data) return res.status(400).json({ error: 'filename și data sunt obligatorii' });
+    try {
+      const base64Data = typeof data === 'string' && data.includes(',') ? data.split(',')[1] : data;
+      const buffer = Buffer.from(base64Data, 'base64');
+      if (buffer.length > 30 * 1024 * 1024) return res.status(400).json({ error: 'Fișier prea mare (max 30MB)' });
+      const siteDir = path.join(UPLOADS_DIR, 'site-content');
+      if (!fs.existsSync(siteDir)) fs.mkdirSync(siteDir, { recursive: true });
+      const rawBase = path.basename(String(filename)).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 128);
+      const ext = path.extname(rawBase).toLowerCase();
+      // Validare magic bytes pentru imagini (video-urile trec fără – sunt prea variate)
+      const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+      if (IMAGE_EXTS.has(ext) && !isValidImageBuffer(buffer)) {
+        return res.status(400).json({ error: 'Conținutul fișierului nu corespunde extensiei imagine' });
+      }
+      const safeName = Date.now() + '-' + (SAFE_MEDIA_EXTENSIONS.has(ext) ? rawBase : rawBase + '.jpg');
+      const savePath = path.resolve(siteDir, safeName);
+      if (!savePath.startsWith(path.resolve(siteDir))) return res.status(400).json({ error: 'Nume fișier invalid' });
+      fs.writeFileSync(savePath, buffer);
+      res.json({ url: '/uploads/site-content/' + safeName });
+    } catch (e) {
+      console.error('Eroare upload site-content:', e);
+      res.status(500).json({ error: 'Eroare la upload' });
+    }
+  });
+
+  // POST - Înregistrează o vizionare (path + ip, opțional geo)
 app.post('/api/analytics/view', async (req, res) => {
   try {
     const path = req.body?.path || req.path || '/';
     const ip = getClientIp(req);
-    const view = { path: path === '' ? '/' : path, ts: new Date().toISOString(), ip: ip || null };
+    const ua = String(req.headers['user-agent'] || '').toLowerCase();
+    const device = /ipad|tablet/.test(ua) ? 'Tablet' : /android|iphone|mobile/.test(ua) ? 'Mobile' : 'Desktop';
+    const view = { path: path === '' ? '/' : path, ts: new Date().toISOString(), ip: ip || null, device };
     const data = await readAnalytics();
     data.views = data.views || [];
     data.views.push(view);
@@ -1559,7 +1920,8 @@ app.post('/api/analytics/view', async (req, res) => {
     await writeAnalytics(data);
     res.status(204).end();
     // Opțional: rezolvă geo în background (doar pentru IP-uri reale, nu localhost)
-    if (ip && ip !== '::1' && ip !== '127.0.0.1' && !ip.startsWith('192.168.') && !ip.startsWith('10.')) {
+    const IP_REGEX = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
+    if (ip && ip !== '::1' && ip !== '127.0.0.1' && !ip.startsWith('192.168.') && !ip.startsWith('10.') && IP_REGEX.test(ip)) {
       fetch(`http://ip-api.com/json/${ip}?fields=country,city`, { signal: AbortSignal.timeout(2000) })
         .then((r) => r.json())
         .then(async (geo) => {
@@ -1593,26 +1955,186 @@ app.get('/api/analytics/summary', async (req, res) => {
     const totalViews = views.length;
     const byPath = {};
     const byDay = {};
+    const byHour = {};
+    const byCountry = {};
+    const byCity = {};
+    const byRegion = {};
+    const byDevice = {};
+    const byPathPerDay = {}; // { "2026-02-18": { "/": 3, "/galerie": 2 } }
+
     views.forEach((v) => {
       const p = v.path || '/';
       byPath[p] = (byPath[p] || 0) + 1;
       try {
-        const day = v.ts ? v.ts.slice(0, 10) : null;
-        if (day) byDay[day] = (byDay[day] || 0) + 1;
+        let day = null;
+        if (v.ts) {
+          const dObj = new Date(v.ts);
+          day = dObj.getFullYear() + '-' + String(dObj.getMonth() + 1).padStart(2, '0') + '-' + String(dObj.getDate()).padStart(2, '0');
+        }
+        if (day) {
+          byDay[day] = (byDay[day] || 0) + 1;
+          if (!byPathPerDay[day]) byPathPerDay[day] = {};
+          byPathPerDay[day][p] = (byPathPerDay[day][p] || 0) + 1;
+        }
+        const hour = v.ts ? new Date(v.ts).getHours() : null;
+        if (hour !== null) byHour[hour] = (byHour[hour] || 0) + 1;
       } catch (_) {}
+      if (v.country) byCountry[v.country] = (byCountry[v.country] || 0) + 1;
+      if (v.city) byCity[v.city] = (byCity[v.city] || 0) + 1;
+      const regionKey = v.country || 'Necunoscut';
+      byRegion[regionKey] = (byRegion[regionKey] || 0) + 1;
+      const deviceKey = v.device || 'Unknown';
+      byDevice[deviceKey] = (byDevice[deviceKey] || 0) + 1;
     });
     const sortedPaths = Object.entries(byPath).sort((a, b) => b[1] - a[1]);
     const mostViewed = sortedPaths[0] ? { path: sortedPaths[0][0], count: sortedPaths[0][1] } : null;
-    const recent = views.slice(-100).reverse().map((v) => ({
+    const recent = views.slice(-500).reverse().map((v) => ({
       path: v.path,
       ts: v.ts,
       country: v.country || null,
       city: v.city || null,
+      device: v.device || 'Unknown',
       ip: v.ip ? v.ip.replace(/(\d+)$/, '.***') : null
     }));
-    res.json({ totalViews, byPath, byDay, mostViewed, recent });
+    res.json({ totalViews, byPath, byDay, byHour, byCountry, byCity, byRegion, byDevice, byPathPerDay, mostViewed, recent });
   } catch (error) {
     console.error('Eroare la citirea analytics:', error);
+    res.status(500).json({ error: 'Eroare server' });
+  }
+});
+
+// GET - Export analytics as CSV (admin only)
+app.get('/api/analytics/export', async (req, res) => {
+  const adminToken = req.headers['x-admin-token'];
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const data = await readAnalytics();
+    const views = data.views || [];
+    const period = req.query.period || 'all'; // last_month, last_6_months, last_year, all
+    const now = new Date();
+    let fromDate = null;
+
+    if (period === 'last_month') {
+      fromDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    } else if (period === 'last_6_months') {
+      fromDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+    } else if (period === 'last_year') {
+      fromDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    }
+
+    const format = req.query.format || 'csv'; // csv, json or json_graphs
+    let filtered = views;
+    if (fromDate) {
+      const fromStr = fromDate.toISOString();
+      filtered = views.filter((v) => v.ts && v.ts >= fromStr);
+    }
+
+    if (format === 'json') {
+      const exportData = filtered.map((v) => ({
+        path: v.path,
+        timestamp: v.ts,
+        country: v.country || '',
+        city: v.city || '',
+      }));
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="analytics_${period}_${now.toISOString().slice(0, 10)}.json"`);
+      return res.json(exportData);
+    }
+
+    if (format === 'json_graphs') {
+      const byDay = {};
+      const byHour = {};
+      const byPath = {};
+      const byCountry = {};
+      const byRegion = {};
+      const byDevice = {};
+
+      filtered.forEach((v) => {
+        const p = v.path || '/';
+        byPath[p] = (byPath[p] || 0) + 1;
+        if (v.country) byCountry[v.country] = (byCountry[v.country] || 0) + 1;
+        const regionKey = v.country || 'Necunoscut';
+        byRegion[regionKey] = (byRegion[regionKey] || 0) + 1;
+        const deviceKey = v.device || 'Unknown';
+        byDevice[deviceKey] = (byDevice[deviceKey] || 0) + 1;
+        try {
+          let day = null;
+          if (v.ts) {
+            const dObj = new Date(v.ts);
+            day = dObj.getFullYear() + '-' + String(dObj.getMonth() + 1).padStart(2, '0') + '-' + String(dObj.getDate()).padStart(2, '0');
+          }
+          if (day) byDay[day] = (byDay[day] || 0) + 1;
+          const hour = v.ts ? new Date(v.ts).getHours() : null;
+          if (hour !== null) byHour[hour] = (byHour[hour] || 0) + 1;
+        } catch (_) {}
+      });
+
+      const exportData = {
+        meta: {
+          exportedAt: now.toISOString(),
+          period,
+          totalViews: filtered.length,
+        },
+        charts: {
+          byDay: Object.entries(byDay)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([date, views]) => ({ date, views })),
+          byHour: Array.from({ length: 24 }, (_, hour) => ({ hour, views: byHour[hour] || 0 })),
+          byPath: Object.entries(byPath)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20)
+            .map(([path, views]) => ({ path, views })),
+          byCountry: Object.entries(byCountry)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20)
+            .map(([country, views]) => ({ country, views })),
+          byRegion: Object.entries(byRegion)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20)
+            .map(([region, views]) => ({ region, views })),
+          byDevice: Object.entries(byDevice)
+            .sort((a, b) => b[1] - a[1])
+            .map(([device, views]) => ({ device, views })),
+        },
+        rows: filtered.map((v) => ({
+          path: v.path,
+          timestamp: v.ts,
+          country: v.country || '',
+          city: v.city || '',
+        })),
+      };
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="analytics_${period}_${now.toISOString().slice(0, 10)}_graphs.json"`);
+      return res.json(exportData);
+    }
+
+    // CSV export
+    const csvRows = ['Pagina,Data,Ora,Țara,Orașul'];
+    filtered.forEach((v) => {
+      const d = v.ts ? new Date(v.ts) : null;
+      const dateStr = d ? d.toLocaleDateString('ro-RO') : '';
+      const timeStr = d ? d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
+      const escapeCsv = (s) => {
+        if (!s) return '';
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+      };
+      csvRows.push([
+        escapeCsv(v.path),
+        escapeCsv(dateStr),
+        escapeCsv(timeStr),
+        escapeCsv(v.country || ''),
+        escapeCsv(v.city || ''),
+      ].join(','));
+    });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="analytics_${period}_${now.toISOString().slice(0, 10)}.csv"`);
+    res.send('\ufeff' + csvRows.join('\n'));
+  } catch (error) {
+    console.error('Eroare la exportul analytics:', error);
     res.status(500).json({ error: 'Eroare server' });
   }
 });
@@ -1668,7 +2190,7 @@ app.put('/api/site/features', async (req, res) => {
 // Handler global pentru erori neprinse (evită 500 fără mesaj)
 app.use((err, req, res, next) => {
   console.error('Eroare neprinsă:', err);
-  res.status(500).json({ error: 'Eroare server: ' + (err.message || 'necunoscută') });
+  res.status(500).json({ error: 'Eroare internă de server' });
 });
 
 // Servește frontend-ul construit (dist/) pentru producție – SPA fallback

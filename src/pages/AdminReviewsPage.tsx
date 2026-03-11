@@ -87,28 +87,6 @@ const AdminReviewsPage: React.FC = () => {
     }
   };
 
-  const [translating, setTranslating] = useState(false);
-  const [translateMsg, setTranslateMsg] = useState('');
-
-  const translateAll = async () => {
-    setTranslating(true);
-    setTranslateMsg('');
-    try {
-      const base = getApiBase();
-      const res = await fetch(`${base}/api/admin/reviews/translate-all`, {
-        method: 'POST',
-        headers: { 'x-admin-token': getAdminToken() || '' },
-      });
-      const data = await res.json();
-      setTranslateMsg(data.message || `${data.translated} recenzii traduse.`);
-      if (data.translated > 0) loadReviews();
-    } catch (e) {
-      setTranslateMsg('Eroare la traducere.');
-    } finally {
-      setTranslating(false);
-    }
-  };
-
   const productNames = Array.from(new Set(list.map((x) => x.productName).filter(Boolean))).sort();
   const filtered = filterProduct
     ? list.filter((x) => x.productName === filterProduct)
@@ -122,19 +100,9 @@ const AdminReviewsPage: React.FC = () => {
         <MessageSquare className="w-8 h-8 text-primary-600" />
         <h1 className="text-2xl font-bold text-dark-950">Recenzii produse</h1>
       </div>
-      <p className="text-dark-600 mb-4">
-        Afișează sau ascunde recenziile pe site; șterge recenziile nedorite. Poți filtra după produs.
+      <p className="text-dark-600 mb-6">
+        Afișează sau ascunde recenziile pe site; șterge recenziile nedorite. Traducerea în EN/RU se face automat la adăugare.
       </p>
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <button
-          onClick={translateAll}
-          disabled={translating}
-          className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm"
-        >
-          {translating ? 'Se traduc...' : '🌐 Traduce recenzii + descrieri (RO/EN/RU)'}
-        </button>
-        {translateMsg && <span className="text-sm text-green-600 font-medium">{translateMsg}</span>}
-      </div>
 
       {/* Filtru produs */}
       <div className="flex flex-wrap items-center gap-3 mb-6">

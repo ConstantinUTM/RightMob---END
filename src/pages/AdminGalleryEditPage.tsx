@@ -6,7 +6,7 @@ import { getAdminToken, useAuth } from '../contexts/AuthContext';
 import { getUploadsBase } from '../lib/api';
 import { translateBatch } from '../lib/translationService';
 import { getAllDetailFields, detailsFromMap, detailsToMap, detailsToMapMultilingual, detailsFromMapMultilingual } from '../lib/categoryDetailFields';
-import { Loader2, Star, Upload, ImagePlus, Trash2, Languages, MessageSquare } from 'lucide-react';
+import { Loader2, Star, ImagePlus, Trash2, Languages, MessageSquare } from 'lucide-react';
 
 const ACCENT = '#374151';
 
@@ -36,7 +36,6 @@ const AdminGalleryEditPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [newMainFile, setNewMainFile] = useState<File | null>(null);
   const [extraFiles, setExtraFiles] = useState<File[]>([]);
   const [urlsToRemove, setUrlsToRemove] = useState<string[]>([]);
   const [setMainImageUrl, setSetMainImageUrl] = useState<string | null>(null);
@@ -212,9 +211,6 @@ const AdminGalleryEditPage: React.FC = () => {
         isPrimary,
         details: detailsToSave,
       };
-      if (newMainFile) {
-        payload.mainImage = { filename: newMainFile.name, data: await toBase64(newMainFile) };
-      }
       if (extraFiles.length > 0) {
         payload.newExtraImages = await Promise.all(
           extraFiles.map(async (f) => ({ filename: f.name, data: await toBase64(f) }))
@@ -224,7 +220,7 @@ const AdminGalleryEditPage: React.FC = () => {
       if (setMainImageUrl) payload.setMainImageUrl = setMainImageUrl;
       payload.reviews = reviews.map((r) => ({ id: r.id, text: r.text, author: r.author, date: r.date, visible: r.visible, source: r.source }));
       await galleryService.updateGalleryItem(String(idToUse), payload, token);
-      navigate('/admin/gallery');
+      navigate('/galerie/' + idToUse);
     } catch (e: any) {
       const msg = e?.message || 'Eroare la actualizare.';
       if (msg.includes('Unauthorized') || msg.includes('401')) {
@@ -271,14 +267,6 @@ const AdminGalleryEditPage: React.FC = () => {
       }
     }
   }
-  const mainDisplayUrl = newMainFile
-    ? URL.createObjectURL(newMainFile)
-    : (setMainImageUrl && !urlsToRemove.includes(setMainImageUrl)
-        ? `${base}${setMainImageUrl.startsWith('/') ? setMainImageUrl : '/' + setMainImageUrl}`
-        : item.url && !urlsToRemove.includes(item.url)
-          ? `${base}${item.url.startsWith('/') ? item.url : '/' + item.url}`
-          : null);
-
   const handleDeleteImage = (url: string) => {
     if (window.confirm('Sigur vrei să ștergi această imagine?')) setUrlsToRemove((prev) => (prev.includes(url) ? prev : [...prev, url]));
   };
@@ -297,15 +285,6 @@ const AdminGalleryEditPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <label className="block text-sm font-medium text-neutral-700 shrink-0">Imagine principală:</label>
-            <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-200 text-sm font-medium cursor-pointer hover:bg-neutral-50 bg-white">
-              <Upload className="w-4 h-4" />
-              {newMainFile ? `Nouă: ${newMainFile.name}` : 'Schimbă imaginea'}
-              <input type="file" accept="image/*" className="sr-only" onChange={(e) => setNewMainFile(e.target.files?.[0] || null)} />
-            </label>
-          </div>
-          <p className="text-xs text-neutral-500 -mt-2">Imaginea principală apare în galeria „Toate pozele” mai jos. Setează acolo care e principală sau adaugă poze.</p>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">Titlu</label>
             <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm" placeholder="Titlul elementului" />

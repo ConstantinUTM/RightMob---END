@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useSiteContent } from './SiteContentContext';
 
 type Language = 'ro' | 'en' | 'ru';
 
@@ -36,6 +37,7 @@ interface LanguageProviderProps {
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+  const { getTextOverride } = useSiteContent();
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
@@ -44,6 +46,9 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
 
   // Translation function
   const t = (key: string): string => {
+    const override = getTextOverride(language, key) || getTextOverride('ro', key);
+    if (override) return override;
+
     const keys = key.split('.');
     let value: any = translations[language];
     
@@ -267,7 +272,11 @@ const translations: Record<Language, any> = {
       relatedTitle: 'Produse Similare',
       reviewsTitle: 'Recenzii',
       noReviews: 'Niciună recenzie afișată.',
+      ratingLabel: 'Rating',
+      reviewTitleLabel: 'Titlu recenzie',
+      reviewTitlePlaceholder: 'Rezumat scurt (opțional)',
       addComment: 'Adaugă un comentariu',
+      reviewDetailsHint: 'Descrie pe scurt experiența, calitatea și livrarea.',
       authorPlaceholder: 'Nume (opțional)',
       iAmOwner: 'Sunt proprietarul acestui produs',
       submitReview: 'Trimite',
@@ -401,7 +410,7 @@ const translations: Record<Language, any> = {
         step4: { title: 'Montare profesională', desc: 'Echipa noastră montează la locul tău' },
       },
       schedule: 'Program montare:',
-      scheduleTime: 'Luni – Sâmbătă, 08:00 – 20:00. Programare flexibilă.',
+      scheduleTime: 'Luni – Vineri, 09:00 – 17:00. Programare flexibilă.',
       ctaText: 'Vrei să discutăm despre proiectul tău?',
       ctaButton: 'Contactează-ne',
       whoWeAre: 'Cine suntem noi?',
@@ -682,7 +691,11 @@ const translations: Record<Language, any> = {
       relatedTitle: 'Related Products',
       reviewsTitle: 'Reviews',
       noReviews: 'No reviews displayed.',
+      ratingLabel: 'Rating',
+      reviewTitleLabel: 'Review title',
+      reviewTitlePlaceholder: 'Short summary (optional)',
       addComment: 'Add a review',
+      reviewDetailsHint: 'Briefly describe your experience, product quality, and delivery.',
       authorPlaceholder: 'Your name (optional)',
       iAmOwner: 'I am the owner of this product',
       submitReview: 'Submit',
@@ -816,7 +829,7 @@ const translations: Record<Language, any> = {
         step4: { title: 'Professional installation', desc: 'Our team installs at your location' },
       },
       schedule: 'Installation schedule:',
-      scheduleTime: 'Monday – Saturday, 08:00 – 20:00. Flexible scheduling.',
+      scheduleTime: 'Monday – Friday, 09:00 – 17:00. Flexible scheduling.',
       ctaText: 'Want to discuss your project?',
       ctaButton: 'Contact us',
       whoWeAre: 'Who are we?',
@@ -1097,7 +1110,11 @@ const translations: Record<Language, any> = {
       relatedTitle: 'Похожие товары',
       reviewsTitle: 'Отзывы',
       noReviews: 'Нет отзывов для отображения.',
+      ratingLabel: 'Оценка',
+      reviewTitleLabel: 'Заголовок отзыва',
+      reviewTitlePlaceholder: 'Краткий итог (необязательно)',
       addComment: 'Добавить отзыв',
+      reviewDetailsHint: 'Кратко опишите впечатление, качество и доставку.',
       authorPlaceholder: 'Ваше имя (необязательно)',
       iAmOwner: 'Я владелец этого товара',
       submitReview: 'Отправить',
@@ -1231,7 +1248,7 @@ const translations: Record<Language, any> = {
         step4: { title: 'Профессиональная установка', desc: 'Наша команда установит на вашем месте' },
       },
       schedule: 'График установки:',
-      scheduleTime: 'Понедельник – Суббота, 08:00 – 20:00. Гибкий график.',
+      scheduleTime: 'Понедельник – Пятница, 09:00 – 17:00. Гибкий график.',
       ctaText: 'Хотите обсудить свой проект?',
       ctaButton: 'Свяжитесь с нами',
       whoWeAre: 'Кто мы?',
@@ -1339,3 +1356,21 @@ const translations: Record<Language, any> = {
     },
   },
 };
+
+  export const getStaticTranslation = (lang: 'ro' | 'en' | 'ru', key: string): string => {
+    const keys = key.split('.');
+    let value: any = (translations as any)[lang];
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = value[k];
+      } else {
+        let fallback: any = (translations as any)['ro'];
+        for (const fk of keys) {
+          if (fallback && typeof fallback === 'object' && fk in fallback) fallback = fallback[fk];
+          else return '';
+        }
+        return typeof fallback === 'string' ? fallback : '';
+      }
+    }
+    return typeof value === 'string' ? value : '';
+  };

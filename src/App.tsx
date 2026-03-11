@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { CurrencyProvider } from './contexts/CurrencyContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { SiteSettingsProvider, useSiteSettings } from './contexts/SiteSettingsContext';
+import { SiteContentProvider } from './contexts/SiteContentContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import FloatingButtons from './components/FloatingButtons';
@@ -26,6 +27,7 @@ const AdminAnalyticsPage = lazy(() => import('./pages/AdminAnalyticsPage'));
 const AdminSettings = lazy(() => import('./pages/AdminSettings'));
 const AdminMessagesPage = lazy(() => import('./pages/AdminMessagesPage'));
 const AdminReviewsPage = lazy(() => import('./pages/AdminReviewsPage'));
+const AdminContentPage = lazy(() => import('./pages/AdminContentPage'));
 
 const PageLoader = () => (
   <div className="min-h-[40vh] flex items-center justify-center">
@@ -136,6 +138,7 @@ function AppRoutes() {
           <Route path="gallery/new" element={<Suspense fallback={<PageLoader />}><AdminGalleryAddPage /></Suspense>} />
           <Route path="gallery/edit/:id" element={<Suspense fallback={<PageLoader />}><AdminGalleryEditPage /></Suspense>} />
           <Route path="analytics" element={<Suspense fallback={<PageLoader />}><AdminAnalyticsPage /></Suspense>} />
+          <Route path="content" element={<Suspense fallback={<PageLoader />}><AdminContentPage /></Suspense>} />
           <Route path="settings" element={<Suspense fallback={<PageLoader />}><AdminSettings /></Suspense>} />
           <Route path="messages" element={<Suspense fallback={<PageLoader />}><AdminMessagesPage /></Suspense>} />
           <Route path="reviews" element={<Suspense fallback={<PageLoader />}><AdminReviewsPage /></Suspense>} />
@@ -147,16 +150,18 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Router>
-      <LanguageProvider>
-        <CurrencyProvider>
-          <SiteSettingsProvider>
-            <AuthProvider>
-              <AppRoutes />
-            </AuthProvider>
-          </SiteSettingsProvider>
-        </CurrencyProvider>
-      </LanguageProvider>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <SiteContentProvider>
+        <LanguageProvider>
+          <CurrencyProvider>
+            <SiteSettingsProvider>
+              <AuthProvider>
+                <AppRoutes />
+              </AuthProvider>
+            </SiteSettingsProvider>
+          </CurrencyProvider>
+        </LanguageProvider>
+      </SiteContentProvider>
     </Router>
   );
 }

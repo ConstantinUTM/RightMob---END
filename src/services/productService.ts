@@ -18,7 +18,16 @@ type GalleryItem = {
   details?: any[];
 };
 
-export type GalleryReview = { id?: string; text: string; author?: string; date?: string; visible?: boolean; source?: 'owner' | 'visitor' };
+export type GalleryReview = {
+  id?: string;
+  text: string;
+  title?: string;
+  rating?: number;
+  author?: string;
+  date?: string;
+  visible?: boolean;
+  source?: 'owner' | 'visitor'
+};
 
 const mapGalleryToProduct = (item: GalleryItem & { reviews?: GalleryReview[] }): Product & { reviews?: GalleryReview[] } => {
   return {
