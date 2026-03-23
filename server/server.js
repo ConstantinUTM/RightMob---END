@@ -6,6 +6,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import compression from 'compression';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import bcrypt from 'bcrypt';
@@ -35,8 +36,10 @@ if (fs.existsSync(envPath)) {
 
 const app = express();
 const PORT = 3001;
+const isProduction = process.env.NODE_ENV === 'production';
 const BCRYPT_ROUNDS = 12;
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+const PASSWORD_RESET_PURPOSE = 'admin-password-reset';
 if (!process.env.JWT_SECRET) {
   console.warn('[API] JWT_SECRET nu e setat în .env – folosesc secret temporar (token-urile expiră la repornire).');
 }
@@ -87,6 +90,28 @@ const secureLog = (event, req, extra = {}) => {
   console.log('[SEC]', event, getClientIp(req), extra?.email || extra?.message || '');
 };
 
+const createMailTransport = () => {
+  if (!(process.env.SMTP_USER && process.env.SMTP_PASS)) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS || ''
+    }
+  });
+};
+
+const getPasswordResetRecipient = (settings) => {
+  const notificationsEmail = typeof settings?.notificationsEmail === 'string' ? settings.notificationsEmail.trim() : '';
+  const adminEmail = typeof settings?.credentials?.email === 'string' ? settings.credentials.email.trim() : '';
+  return notificationsEmail || adminEmail;
+};
+
 // Bază de date: PostgreSQL (DATABASE_URL) sau SQLite – API async
 let dbGallery, dbMessages, dbCategories, dbAdminSettings, dbAnalytics, useDb;
 try {
@@ -115,6 +140,14 @@ const sanitizeImageFilename = (fname) => {
   return SAFE_IMAGE_EXTENSIONS.has(ext) ? base : base.replace(/\.[^.]+$/, '') || 'image';
 };
 const isPasswordHash = (str) => typeof str === 'string' && str.startsWith('$2b$');
+const getStoredAdminPassword = (credentials) => {
+  const directPassword = credentials?.password != null ? String(credentials.password).trim() : '';
+  const legacyPasswordHash = credentials?.passwordHash != null ? String(credentials.passwordHash).trim() : '';
+
+  if (isPasswordHash(directPassword)) return directPassword;
+  if (isPasswordHash(legacyPasswordHash)) return legacyPasswordHash;
+  return directPassword;
+};
 const validatePasswordComplexity = (password) => {
   if (typeof password !== 'string' || password.length < 8) return false;
   if (!/[A-Z]/.test(password)) return false;
@@ -148,7 +181,13 @@ setInterval(() => {
 // Admin auth + CSRF guard
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
-  return ALLOWED_ORIGINS.some((o) => origin === o || origin.startsWith(o));
+  // SECURITY FIX: Strict origin validation - parse as URL to prevent startsWith bypass
+  try {
+    const url = new URL(origin);
+    return ALLOWED_ORIGINS.includes(url.origin);
+  } catch (_) {
+    return false; // Invalid URL format
+  }
 };
 
 const requireAdmin = (req, res, next) => {
@@ -167,23 +206,61 @@ const requireAdmin = (req, res, next) => {
 
 // Middleware
 app.use(helmet({
-  contentSecurityPolicy: false,
+  // Keep current behavior in dev to avoid breaking local tooling,
+  // but enforce CSP in production.
+  contentSecurityPolicy: isProduction ? {
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "script-src": ["'self'", "'unsafe-inline'"],
+      "style-src": ["'self'", "'unsafe-inline'", "https:"],
+      "img-src": ["'self'", "data:", "blob:", "https:"],
+      "connect-src": ["'self'", "https:", "wss:"],
+      "font-src": ["'self'", "https:", "data:"],
+      "media-src": ["'self'", "blob:", "https:"],
+      "frame-ancestors": ["'self'"],
+    }
+  } : false,
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
-    if (ALLOWED_ORIGINS.some((o) => origin === o || origin.startsWith(o))) return cb(null, true);
+    try {
+      const url = new URL(origin);
+      if (ALLOWED_ORIGINS.includes(url.origin)) return cb(null, true);
+    } catch (_) {}
     cb(null, false);
   },
   credentials: true
 }));
-app.use(express.json({ limit: '20mb' }));
-app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
-app.use('/images', express.static(path.join(__dirname, '..', 'public', 'images')));
+app.use(compression());
+app.use(express.json({ limit: '80mb' }));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads'), {
+  etag: true,
+  lastModified: true,
+  maxAge: '365d',
+  immutable: true,
+}));
+app.use('/images', express.static(path.join(__dirname, '..', 'public', 'images'), {
+  etag: true,
+  lastModified: true,
+  maxAge: '365d',
+  immutable: true,
+}));
 app.get('/favicon.png', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'favicon.png'));
+});
+
+// Răspuns clar când payload-ul JSON depășește limita (ex: multe imagini base64 la salvare)
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'Payload prea mare. Redu numărul de poze încărcate simultan sau dimensiunea lor (max 15MB/fișier).'
+    });
+  }
+  return next(err);
 });
 
 const loginRateLimiter = rateLimit({
@@ -197,6 +274,18 @@ const loginRateLimiter = rateLimit({
   }
 });
 app.use('/api/admin/login', loginRateLimiter);
+
+const passwordResetRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: 'Prea multe cereri de resetare. Reîncearcă în 15 minute.' },
+  standardHeaders: true,
+  handler: (req, res) => {
+    secureLog('rate_limit_password_reset', req, { message: 'Prea multe cereri reset parolă' });
+    res.status(429).json({ error: 'Prea multe cereri de resetare. Reîncearcă în 15 minute.' });
+  }
+});
+app.use('/api/admin/request-password-reset', passwordResetRateLimiter);
 
 const messagesRateLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -221,6 +310,20 @@ const emailTrackRateLimiter = rateLimit({
   standardHeaders: true
 });
 app.use('/api/email-track', emailTrackRateLimiter);
+
+const galleryUploadRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 8,
+  message: { error: 'Prea multe upload-uri. Încearcă din nou în aproximativ un minut.' },
+  standardHeaders: true
+});
+
+const siteContentUploadRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 8,
+  message: { error: 'Prea multe upload-uri. Încearcă din nou în aproximativ un minut.' },
+  standardHeaders: true
+});
 
 // Health check – fără fișiere, doar răspunde 200 (pentru a verifica că serverul și proxy merg)
 app.get('/api/health', (req, res) => {
@@ -382,10 +485,10 @@ const writeMessages = async (messages) => {
   return writeMessagesFile(messages);
 };
 
-// Setări implicite – fără parolă validă (configurare manuală necesară dacă fișierul lipsește)
+// Setări implicite – SECURITY: Force non-empty default password to prevent bypass
 const DEFAULT_ADMIN_SETTINGS = {
-  profile: { username: 'Admin', email: 'admin@luxmobila.com', profileImage: '' },
-  credentials: { email: 'admin@luxmobila.com', password: '', uid: 'mock-admin-uid' },
+  profile: { username: 'Admin', email: 'admin@rightmob.md', profileImage: '' },
+  credentials: { email: 'admin@rightmob.md', password: process.env.DEFAULT_ADMIN_PASSWORD || 'ChangeMe!2026', uid: 'mock-admin-uid', setupRequired: true },
   notificationsEmail: '',
   notificationsPhone: '',
   features: { tryInMyRoomEnabled: true }
@@ -466,14 +569,19 @@ const writeGalleryFile = (items) => {
 };
 const readGallery = async () => {
   if (useDb()) {
-    let items = await dbGallery.get([]);
-    if (Array.isArray(items) && items.length === 0 && fs.existsSync(GALLERY_FILE)) {
-      try {
-        items = JSON.parse(fs.readFileSync(GALLERY_FILE, 'utf8'));
-        if (Array.isArray(items)) await dbGallery.set(items);
-      } catch (_) {}
+    try {
+      let items = await dbGallery.get([]);
+      if (Array.isArray(items) && items.length === 0 && fs.existsSync(GALLERY_FILE)) {
+        try {
+          items = JSON.parse(fs.readFileSync(GALLERY_FILE, 'utf8'));
+          if (Array.isArray(items)) await dbGallery.set(items);
+        } catch (_) {}
+      }
+      return Array.isArray(items) ? items : [];
+    } catch (error) {
+      console.error('Eroare readGallery din DB, fallback pe fișier:', error?.message || error);
+      return readGalleryFile();
     }
-    return Array.isArray(items) ? items : [];
   }
   return readGalleryFile();
 };
@@ -705,17 +813,27 @@ app.post('/api/messages', async (req, res) => {
             } : undefined
           });
           if (transporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
+            // SECURITY: HTML escaping to prevent email header injection and XSS
+            const htmlEscapeMap = {
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;'
+            };
+            const escapeHtml = (str) => String(str || '').replace(/[&<>"']/g, (c) => htmlEscapeMap[c] || c);
+            
             const phoneLine = newMessage.phone ? `\nTelefon: ${newMessage.phone}` : '';
-            const phoneHtml = newMessage.phone ? `<p><strong>Telefon:</strong> ${newMessage.phone}</p>` : '';
+            const phoneHtml = newMessage.phone ? `<p><strong>Telefon:</strong> ${escapeHtml(newMessage.phone)}</p>` : '';
             const notifPhone = (settings?.notificationsPhone || '').trim();
             const notifPhoneLine = notifPhone ? `\n\nContact notificări (opțional): ${notifPhone}` : '';
-            const notifPhoneHtml = notifPhone ? `<p><em>Dacă dorești, poți contacta și la: ${notifPhone}</em></p>` : '';
+            const notifPhoneHtml = notifPhone ? `<p><em>Dacă dorești, poți contacta și la: ${escapeHtml(notifPhone)}</em></p>` : '';
             await transporter.sendMail({
               from: process.env.SMTP_FROM || process.env.SMTP_USER,
               to: toEmail,
-              subject: `[Contact] Mesaj de la ${fullName}`,
+              subject: `[Contact] Mesaj de la ${escapeHtml(fullName)}`,
               text: `Nume: ${fullName}\nEmail: ${email}${phoneLine}\n\nMesaj:\n${message}${notifPhoneLine}`,
-              html: `<p><strong>Nume:</strong> ${fullName}</p><p><strong>Email:</strong> ${email}</p>${phoneHtml}<p><strong>Mesaj:</strong></p><p>${message.replace(/\n/g, '<br>')}</p>${notifPhoneHtml}`
+              html: `<p><strong>Nume:</strong> ${escapeHtml(fullName)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p>${phoneHtml}<p><strong>Mesaj:</strong></p><p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>${notifPhoneHtml}`
             });
           }
         } catch (mailErr) {
@@ -760,8 +878,8 @@ app.post('/api/email-track', async (req, res) => {
 // GET - Obține toate mesajele (admin only)
 app.get('/api/admin/messages', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
-  if (!adminToken) {
-    return res.status(401).json({ error: 'Unauthorized - token missing' });
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const messages = await readMessages();
@@ -832,21 +950,26 @@ app.delete('/api/categories/:id', async (req, res) => {
 
 // GET - Obține un item din galerie după ID (acceptă id string sau number în URL)
 app.get('/api/gallery/:id', async (req, res) => {
-  const gallery = await readGallery();
-  const idParam = req.params.id;
-  const item = gallery.find((it) => String(it.id) === String(idParam));
-  if (!item) {
-    return res.status(404).json({ error: 'Element nu a fost găsit' });
+  try {
+    const gallery = await readGallery();
+    const idParam = req.params.id;
+    const item = gallery.find((it) => String(it.id) === String(idParam));
+    if (!item) {
+      return res.status(404).json({ error: 'Element nu a fost găsit' });
+    }
+    const str = (v) => (v != null ? String(v) : '');
+    const out = {
+      ...item,
+      aboutDescription: str(item.aboutDescription),
+      aboutDescription_ro: str(item.aboutDescription_ro || item.aboutDescription),
+      aboutDescription_en: str(item.aboutDescription_en),
+      aboutDescription_ru: str(item.aboutDescription_ru)
+    };
+    res.json(out);
+  } catch (error) {
+    console.error('Eroare GET /api/gallery/:id', req.params.id, error?.message || error);
+    res.status(500).json({ error: 'Eroare internă de server' });
   }
-  const str = (v) => (v != null ? String(v) : '');
-  const out = {
-    ...item,
-    aboutDescription: str(item.aboutDescription),
-    aboutDescription_ro: str(item.aboutDescription_ro || item.aboutDescription),
-    aboutDescription_en: str(item.aboutDescription_en),
-    aboutDescription_ru: str(item.aboutDescription_ru)
-  };
-  res.json(out);
 });
 
 function translateReviewText(originalText, sourceLang) {
@@ -1121,7 +1244,7 @@ app.post('/api/admin/migrate-products-to-gallery', async (req, res) => {
 });
 
 // POST - Încarcă o imagine în galerie (admin only)
-app.post('/api/gallery/upload', async (req, res) => {
+app.post('/api/gallery/upload', galleryUploadRateLimiter, async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
   if (!isValidAdminToken(adminToken)) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -1258,7 +1381,7 @@ app.put('/api/gallery/:id', async (req, res) => {
       return res.status(404).json({ error: 'Element nu a fost găsit' });
     }
     const item = gallery[index];
-    const { description, category, isPrimary, details: detailsPayload, mainImage, newExtraImages, setMainImageUrl, removeImageUrls, visible, reviews: reviewsPayload } = body;
+    const { description, category, isPrimary, details: detailsPayload, mainImage, newExtraImages, setMainImageUrl, removeImageUrls, imageOrderUrls, visible, reviews: reviewsPayload } = body;
     const aboutDescriptionFromBody = body.aboutDescription;
     if (typeof aboutDescriptionFromBody === 'string') {
       item.aboutDescription = aboutDescriptionFromBody.trim();
@@ -1340,7 +1463,7 @@ app.put('/api/gallery/:id', async (req, res) => {
     const categorySlug = slugForFolder(item.category);
     const projectSlug = slugForFolder(item.description || 'lucrare');
     const subDir = path.join(UPLOADS_DIR, categorySlug, projectSlug);
-    const saveDataToSubdir = (fname, payload) => {
+    const toImageBuffer = (payload) => {
       let base64Data = payload;
       if (typeof payload === 'string' && payload.startsWith('data:')) {
         const commaIndex = payload.indexOf(',');
@@ -1349,6 +1472,9 @@ app.put('/api/gallery/:id', async (req, res) => {
       const buffer = Buffer.from(base64Data, 'base64');
       if (buffer.length > MAX_UPLOAD_BYTES) throw new Error('Fișier prea mare (max 15MB)');
       if (!isValidImageBuffer(buffer)) throw new Error('Format imagine invalid');
+      return buffer;
+    };
+    const saveBufferToSubdir = (fname, buffer) => {
       const safeBase = sanitizeImageFilename(fname);
       const safeName = Date.now() + '-' + (safeBase || 'image').replace(/[^a-zA-Z0-9._-]/g, '_');
       const ext = path.extname(safeName).toLowerCase();
@@ -1360,6 +1486,35 @@ app.put('/api/gallery/:id', async (req, res) => {
       const url = '/uploads/' + relativePath.replace(/\\/g, '/');
       return { filename: finalName, url };
     };
+    const saveDataToSubdir = (fname, payload) => saveBufferToSubdir(fname, toImageBuffer(payload));
+
+    const hashBuffer = (buffer) => crypto.createHash('sha256').update(buffer).digest('hex');
+    const hashByUrl = (url) => {
+      if (!url || !url.startsWith('/uploads/')) return null;
+      const rel = url.replace(/^\/uploads\/?/, '').replace(/\//g, path.sep);
+      const fullPath = path.resolve(UPLOADS_DIR, rel);
+      if (!fullPath.startsWith(path.resolve(UPLOADS_DIR))) return null;
+      if (!fs.existsSync(fullPath)) return null;
+      try {
+        const existingBuffer = fs.readFileSync(fullPath);
+        return hashBuffer(existingBuffer);
+      } catch {
+        return null;
+      }
+    };
+
+    const existingImageHashes = new Set();
+    const addExistingHash = (url) => {
+      const hash = hashByUrl(url);
+      if (hash) existingImageHashes.add(hash);
+    };
+    addExistingHash(item.url);
+    if (Array.isArray(item.details)) {
+      item.details.forEach((row) => {
+        if (!Array.isArray(row?.images)) return;
+        row.images.forEach((img) => addExistingHash(img?.url));
+      });
+    }
     if (mainImage && mainImage.filename && mainImage.data) {
       try {
         const saved = saveDataToSubdir(mainImage.filename, mainImage.data);
@@ -1387,8 +1542,14 @@ app.put('/api/gallery/:id', async (req, res) => {
       newExtraImages.forEach(img => {
         if (img && img.filename && img.data) {
           try {
-            const saved = saveDataToSubdir(img.filename, img.data);
+            const buffer = toImageBuffer(img.data);
+            const newHash = hashBuffer(buffer);
+            if (existingImageHashes.has(newHash)) {
+              return;
+            }
+            const saved = saveBufferToSubdir(img.filename, buffer);
             extraRow.images.push({ url: saved.url, filename: saved.filename });
+            existingImageHashes.add(newHash);
           } catch (e) {
             console.warn('Nu am putut salva imagine suplimentară:', e);
           }
@@ -1454,6 +1615,35 @@ app.put('/api/gallery/:id', async (req, res) => {
         }
       }
     });
+
+    if (Array.isArray(imageOrderUrls)) {
+      const allCurrentUrls = [];
+      if (item.url) allCurrentUrls.push(item.url);
+      if (Array.isArray(item.details)) {
+        item.details.forEach((row) => {
+          if (!Array.isArray(row?.images)) return;
+          row.images.forEach((img) => {
+            if (img?.url) allCurrentUrls.push(img.url);
+          });
+        });
+      }
+      const currentSet = new Set(allCurrentUrls);
+      const uniqueOrder = [];
+      const used = new Set();
+      imageOrderUrls.forEach((u) => {
+        if (typeof u !== 'string') return;
+        const url = u.trim();
+        if (!url || used.has(url) || !currentSet.has(url)) return;
+        used.add(url);
+        uniqueOrder.push(url);
+      });
+      allCurrentUrls.forEach((url) => {
+        if (used.has(url)) return;
+        used.add(url);
+        uniqueOrder.push(url);
+      });
+      item.imageOrderUrls = uniqueOrder;
+    }
     if (item.aboutDescription === undefined) item.aboutDescription = '';
     const written = await writeGallery(gallery);
     if (!written) {
@@ -1560,8 +1750,8 @@ app.put('/api/admin/messages/:id/read', async (req, res) => {
 // DELETE - Șterge un mesaj (admin only)
 app.delete('/api/admin/messages/:id', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
-  if (!adminToken) {
-    return res.status(401).json({ error: 'Unauthorized - token missing' });
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const messages = await readMessages();
@@ -1603,8 +1793,10 @@ app.post('/api/admin/login', async (req, res) => {
     console.error('Login: citire setări:', e && e.message);
   }
 
-  const storedPass = creds.password != null ? String(creds.password) : '';
-  if (!storedPass || storedPass.length === 0) {
+  const storedPass = getStoredAdminPassword(creds);
+  // CRITICAL SECURITY: Prevent login with empty password (rejects default admin initialization bypass)
+  if (!storedPass || storedPass.length === 0 || storedPass.trim() === '') {
+    secureLog('login_fail_empty_password', req, { email: inputStr });
     return res.status(401).json({ error: 'Credențiale invalide' });
   }
 
@@ -1668,6 +1860,16 @@ app.post('/api/admin/logout', express.json(), (req, res) => {
   res.json({ message: 'Delogat cu succes' });
 });
 
+// POST - Resetarea parolei din link public a fost dezactivată din motive de securitate.
+app.post('/api/admin/request-password-reset', async (req, res) => {
+  return res.status(403).json({ error: 'Resetarea parolei din link public este dezactivată. Folosește schimbarea parolei din contul admin autentificat.' });
+});
+
+// POST - Endpoint de resetare prin token dezactivat.
+app.post('/api/admin/reset-password', async (req, res) => {
+  return res.status(403).json({ error: 'Resetarea parolei prin token este dezactivată. Folosește schimbarea parolei din contul admin autentificat.' });
+});
+
 // POST - Schimbă parola admin (admin only) – validare complexitate + bcrypt
 app.post('/api/admin/change-password', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
@@ -1689,7 +1891,7 @@ app.post('/api/admin/change-password', async (req, res) => {
       return res.status(500).json({ error: 'Eroare la citirea setărilor' });
     }
 
-    const stored = settings.credentials.password != null ? String(settings.credentials.password) : '';
+    const stored = getStoredAdminPassword(settings.credentials);
     if (!stored) {
       return res.status(401).json({ error: 'Parola curentă este incorectă' });
     }
@@ -1705,6 +1907,7 @@ app.post('/api/admin/change-password', async (req, res) => {
     }
 
     settings.credentials.password = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    delete settings.credentials.passwordHash;
     if (await writeAdminSettings(settings)) {
       secureLog('password_changed', req, { message: 'Parolă actualizată' });
       res.json({ message: 'Parolă actualizată cu succes' });
@@ -1873,7 +2076,7 @@ app.put('/api/admin/site-content', (req, res) => {
 // POST - Înregistrează o vizionare (path + ip, opțional geo)
   // POST - Upload media (imagine/video) pentru site-content (admin)
   const SAFE_MEDIA_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.mov', '.ogg']);
-  app.post('/api/admin/site-content/upload', async (req, res) => {
+  app.post('/api/admin/site-content/upload', siteContentUploadRateLimiter, async (req, res) => {
     const adminToken = req.headers['x-admin-token'];
     if (!isValidAdminToken(adminToken)) return res.status(401).json({ error: 'Unauthorized' });
     const { filename, data } = req.body || {};

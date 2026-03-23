@@ -180,12 +180,7 @@ const AdminMessagesPage: React.FC = () => {
                     return (
                       <button
                         key={msg.id}
-                        onClick={() => {
-                          setSelectedMessage(msg);
-                          if (!msg.read) {
-                            markAsRead(msg.id);
-                          }
-                        }}
+                        onClick={() => setSelectedMessage(msg)}
                         className={`w-full p-4 border-b border-gray-100 text-left hover:bg-primary-50 transition-colors ${
                           selectedMessage?.id === msg.id ? 'bg-primary-50 border-l-4 border-l-primary-600' : ''
                         } ${!msg.read ? 'bg-blue-50' : ''}`}

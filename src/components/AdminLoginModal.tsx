@@ -33,7 +33,6 @@ const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose }) =>
       // Navigate to dashboard
       setTimeout(() => {
         navigate('/admin', { replace: true });
-        window.location.reload();
       }, 100);
     } catch (error: any) {
       console.error('Login error:', error);
@@ -162,6 +161,11 @@ const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose }) =>
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-sm text-dark-500">
+                  Resetarea parolei se face doar din contul admin deja autentificat.
+                </p>
+              </div>
             </div>
 
             {/* Submit Button */}
@@ -179,7 +183,7 @@ const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose }) =>
           {/* Info – culori RightMob */}
           <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-primary-50 to-red-50 border border-primary-200/50">
             <p className="text-sm text-primary-800 text-center">
-              🔒 Poți te autentifica cu <strong>numele</strong> sau cu <strong>email-ul</strong> din Setări
+              🔒 Te poți autentifica cu <strong>numele</strong> sau cu <strong>email-ul</strong> din Setări. Accesul rapid la admin este ascuns din meniul public.
             </p>
           </div>
         </motion.div>

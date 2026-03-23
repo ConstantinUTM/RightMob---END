@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, Box, Mail, LayoutDashboard, Phone, Shield } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, LogOut, Box, Mail, LayoutDashboard, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -10,17 +10,31 @@ import Logo from './Logo';
 
 const Header: React.FC = () => {
   const { isAdmin, signOut } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { features } = useSiteSettings();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        setIsMobileMenuOpen(false);
+        navigate('/admin');
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [navigate]);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -43,17 +57,14 @@ const Header: React.FC = () => {
       : `font-medium transition-colors duration-200 ${active ? 'text-[#2563eb]' : 'text-white/85 hover:text-white'}`;
   };
 
-  const email = import.meta.env.VITE_COMPANY_EMAIL || 'contact@rightmob.md';
   const phone = import.meta.env.VITE_COMPANY_PHONE || '';
   const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '373XXXXXXXX';
 
   const getHeaderContext = () => {
     const path = location.pathname;
-    const now = new Date();
-    const dateTime = `${now.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })}, ${now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}`;
     const device = /iPhone/i.test(navigator.userAgent) ? 'iPhone' : /iPad/i.test(navigator.userAgent) ? 'iPad' : /Android/i.test(navigator.userAgent) ? 'Android' : 'Desktop';
     const city = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop()?.replace(/_/g, ' ') || ''; } catch { return ''; } })();
-    const lang = (localStorage.getItem('language') || localStorage.getItem('lang') || 'ro').toUpperCase();
+    const lang = language.toUpperCase();
     let pageCtx = '';
     if (path.startsWith('/galerie/') || path.startsWith('/produs/')) {
       const h1 = document.querySelector('h1');
@@ -61,20 +72,31 @@ const Header: React.FC = () => {
       if (name) pageCtx = `Sunt interesat de: ${name}\nLink: ${window.location.href}`;
     } else if (path === '/galerie') pageCtx = 'Am navigat prin galeria de produse.';
     else if (path === '/despre') pageCtx = 'Am vizitat pagina Despre noi.';
-    return { pageCtx, dateTime, device, city, lang };
-  };
-
-  const openHeaderWhatsApp = () => {
-    const { pageCtx, dateTime, device, city, lang } = getHeaderContext();
-    sendTrack('whatsapp');
-    const info = [`📱 ${device}`, city ? `📍 ${city}` : '', `🌐 ${lang}`, `📄 ${location.pathname}`].filter(Boolean).join('  |  ');
-    const msg = encodeURIComponent(`Bună ziua! 👋\n\n${pageCtx ? pageCtx + '\n\n' : ''}Aș dori mai multe detalii și o consultație.\n\n${info}\n\nVă mulțumesc!`);
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const url = isMobile ? `whatsapp://send?phone=${whatsappNumber}&text=${msg}` : `https://wa.me/${whatsappNumber}?text=${msg}`;
-    window.open(url, '_blank');
+    return { pageCtx, device, city, lang };
   };
   const [phoneCopied, setPhoneCopied] = useState(false);
   const [phoneMenuOpen, setPhoneMenuOpen] = useState(false);
+  const [emailMenuOpen, setEmailMenuOpen] = useState(false);
+  const EMAIL_TARGETS = [
+    {
+      label: 'Info',
+      email: 'info@rightmob.md',
+      subject: 'Solicitare informații generale - RightMob',
+      intro: 'Doresc informații generale despre produse, showroom și colaborări.',
+    },
+    {
+      label: 'Ofertă',
+      email: 'oferta@rightmob.md',
+      subject: 'Solicitare ofertă personalizată - RightMob',
+      intro: 'Doresc o ofertă personalizată pentru mobilier la comandă.',
+    },
+    {
+      label: 'Comenzi',
+      email: 'comenzi@rightmob.md',
+      subject: 'Solicitare privind comandă/livrare - RightMob',
+      intro: 'Doresc detalii despre status comandă, livrare sau instalare.',
+    },
+  ];
   const handleCopyPhone = () => {
     const raw = phone.replace(/\s/g, '');
     navigator.clipboard.writeText(raw).then(() => {
@@ -103,12 +125,11 @@ const Header: React.FC = () => {
     }).catch(() => {});
   };
 
-  const buildGmailUrl = () => {
-    const { pageCtx, dateTime, device, city, lang } = getHeaderContext();
-    sendTrack('email');
-    const subject = 'Solicitare consultație – RightMob';
-    const body = `Bună ziua,\n\nV-am contactat prin intermediul site-ului RightMob.\n${pageCtx ? pageCtx + '\n' : ''}\nAș dori să solicit o consultație și mai multe detalii.\n\n---\nDispozitiv: ${device}\n${city ? `Locație aprox.: ${city}\n` : ''}Limba site: ${lang}\nPagina: ${location.pathname}\n---\n\nVă mulțumesc anticipat!\nCu respect,\n`;
-    return `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const buildGmailUrl = (target: { email: string; subject: string; intro: string }) => {
+    const { pageCtx, device, city, lang } = getHeaderContext();
+    sendTrack(`email:${target.email}`);
+    const body = `Bună ziua,\n\n${target.intro}\n${pageCtx ? pageCtx + '\n' : ''}\nAștept mai multe detalii.\n\n---\nDispozitiv: ${device}\n${city ? `Locație aprox.: ${city}\n` : ''}Limba site: ${lang}\nPagina: ${location.pathname}\n---\n\nMulțumesc!\n`;
+    return `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(target.email)}&su=${encodeURIComponent(target.subject)}&body=${encodeURIComponent(body)}`;
   };
 
   return (
@@ -122,10 +143,46 @@ const Header: React.FC = () => {
             </Link>
             {/* Mobil: email și telefon – email pe două rânduri dacă e lung, ca să se vadă tot */}
             <div className={`lg:hidden flex items-center gap-2 sm:gap-3 min-w-0 ${textColor}`}>
-              <a href="#" onClick={(e) => { e.preventDefault(); window.open(buildGmailUrl(), '_blank', 'noopener,noreferrer'); }} className={`flex items-center gap-1.5 p-1.5 rounded-lg font-medium transition-colors hover:opacity-80 min-w-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb]' : ''}`} aria-label={email}>
-                <Mail className="w-4 h-4 shrink-0" />
-                <span className="text-[11px] sm:text-xs break-all line-clamp-2 max-w-[110px] min-[380px]:max-w-[150px] sm:max-w-[200px]">{email}</span>
-              </a>
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setEmailMenuOpen((o) => !o)}
+                  className={`flex items-center gap-1.5 p-1.5 rounded-lg font-medium transition-colors hover:opacity-80 min-w-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb]' : ''}`}
+                  aria-label="Email"
+                >
+                  <Mail className="w-4 h-4 shrink-0" />
+                </button>
+                <AnimatePresence>
+                  {emailMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setEmailMenuOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 z-50 min-w-[220px] max-w-[85vw] overflow-hidden"
+                      >
+                        {EMAIL_TARGETS.map((item) => (
+                          <button
+                            key={item.email}
+                            onClick={() => {
+                              setEmailMenuOpen(false);
+                              window.open(buildGmailUrl(item), '_blank', 'noopener,noreferrer');
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                          >
+                            <Mail className="w-4 h-4 text-blue-600" />
+                            <div className="text-left">
+                              <p className="text-[10px] uppercase tracking-wider text-gray-500">{item.label}</p>
+                              <p className="text-sm text-gray-900">{item.email}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
               {phone && (
                 <div className="relative shrink-0">
                   <button onClick={() => setPhoneMenuOpen(o => !o)} className={`flex items-center gap-1.5 p-1.5 rounded-lg font-medium transition-colors hover:opacity-80 ${isSticky || !isTransparentPage ? 'text-[#2563eb]' : ''}`} aria-label="Telefon">
@@ -180,14 +237,46 @@ const Header: React.FC = () => {
             </Link>
             {/* Separator vizual între nav și contact/utils */}
             <span className="hidden xl:block w-px h-6 bg-current opacity-20 shrink-0" aria-hidden />
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); window.open(buildGmailUrl(), '_blank', 'noopener,noreferrer'); }}
-              className={`hidden sm:flex items-center gap-2 px-2 py-1.5 rounded-lg font-medium transition-colors shrink-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb] hover:bg-blue-50/80' : 'text-white/90 hover:text-white'}`}
-            >
-              <Mail className="w-4 h-4 shrink-0" />
-              <span className="text-sm hidden xl:inline truncate max-w-[160px]">{email}</span>
-            </a>
+            <div className="relative hidden sm:block shrink-0">
+              <button
+                onClick={() => setEmailMenuOpen(o => !o)}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg font-medium transition-colors shrink-0 ${isSticky || !isTransparentPage ? 'text-[#2563eb] hover:bg-blue-50/80' : 'text-white/90 hover:text-white hover:bg-white/10'}`}
+              >
+                <Mail className="w-4 h-4 shrink-0" />
+                <span className="text-sm hidden xl:inline">Gmail</span>
+              </button>
+              <AnimatePresence>
+                {emailMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setEmailMenuOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 z-50 min-w-[240px] overflow-hidden"
+                    >
+                      {EMAIL_TARGETS.map((item) => (
+                        <button
+                          key={item.email}
+                          onClick={() => {
+                            setEmailMenuOpen(false);
+                            window.open(buildGmailUrl(item), '_blank', 'noopener,noreferrer');
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+                        >
+                          <Mail className="w-4 h-4 text-blue-600" />
+                          <div className="text-left">
+                            <p className="text-[10px] uppercase tracking-wider text-gray-500">{item.label}</p>
+                            <p className="text-sm text-gray-900">{item.email}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
             {phone && (
               <div className="relative hidden xl:block shrink-0">
                 <button
@@ -243,16 +332,7 @@ const Header: React.FC = () => {
                   <LogOut className="w-6 h-6" />
                 </motion.button>
               </>
-            ) : (
-              <Link
-                to="/admin"
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg font-medium transition-colors shrink-0 whitespace-nowrap border ${isSticky || !isTransparentPage ? 'text-[#1e3a8a] border-blue-200 hover:bg-blue-50' : 'text-white border-white/40 hover:bg-white/10'}`}
-                aria-label="Admin login"
-              >
-                <Shield className="w-4 h-4 shrink-0" />
-                <span className="hidden xl:inline">Admin</span>
-              </Link>
-            )}
+            ) : null}
           </div>
 
           {/* Mobil: buton meniu (hamburger) – mereu vizibil sub lg */}
@@ -291,9 +371,11 @@ const Header: React.FC = () => {
               <Link to="/contact" className={`block px-4 py-3 font-medium ${isActive('/contact') ? 'text-primary-500' : ''} hover:opacity-90`} onClick={() => setIsMobileMenuOpen(false)}>
                 {t('nav.contact')}
               </Link>
-              <Link to="/admin" className="block px-4 py-3 font-medium hover:opacity-90" onClick={() => setIsMobileMenuOpen(false)}>
-                {isAdmin ? 'Dashboard' : 'Admin Login'}
-              </Link>
+              {isAdmin && (
+                <Link to="/admin" className="block px-4 py-3 font-medium hover:opacity-90" onClick={() => setIsMobileMenuOpen(false)}>
+                  Dashboard
+                </Link>
+              )}
               <div className="px-4 py-3 border-t border-current/10">
                 <LanguageSelector dark={isTransparentPage && !isSticky} />
               </div>

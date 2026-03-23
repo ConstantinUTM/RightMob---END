@@ -3,7 +3,7 @@ import {
   User, 
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut,
-  onAuthStateChanged 
+  onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { getApiBase } from '../lib/api';
@@ -32,6 +32,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  requestPasswordReset: (login: string) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -40,6 +41,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signIn: async () => {},
   signOut: async () => {},
+  requestPasswordReset: async () => '',
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -53,18 +55,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  /* 
-   * CONFIGURARE EMAIL ADMIN
-   * 
-   * După ce creezi utilizatorul admin în Firebase Console:
-   * 1. Accesează Firebase Console → Authentication → Users
-   * 2. Click "Add user" și creează contul
-   * 3. Înlocuiește 'admin@luxmobila.com' cu email-ul tău
-   */
-  const ADMIN_EMAILS = [
-    'constantin.bulai21@gmail.com',
-    'rightstep212@gmail.com'
-  ];
+  // CONFIGURARE EMAIL ADMIN din .env (VITE_ADMIN_EMAILS=email1,email2)
+  const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@rightmob.md')
+    .split(',')
+    .map((email: string) => email.trim().toLowerCase())
+    .filter(Boolean);
 
   useEffect(() => {
     if (USE_MOCK_AUTH) {
@@ -87,7 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      setIsAdmin(user ? ADMIN_EMAILS.includes(user.email || '') : false);
+      setIsAdmin(user ? ADMIN_EMAILS.includes((user.email || '').toLowerCase()) : false);
       setLoading(false);
     });
 
@@ -156,12 +151,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await firebaseSignOut(auth);
   };
 
+  const requestPasswordReset = async (login: string) => {
+    void login;
+    throw new Error('Resetarea parolei din link public este dezactivată. Schimbă parola din setările contului admin autentificat.');
+  };
+
   const value: AuthContextType = {
     currentUser,
     isAdmin,
     loading,
     signIn,
     signOut,
+    requestPasswordReset,
   };
 
   return (

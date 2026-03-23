@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './FloatingButtons.css';
 
 function getDeviceInfo(): string {
@@ -25,7 +25,7 @@ function getLocationFromTimezone(): string {
 }
 
 function getSiteLang(): string {
-  const stored = localStorage.getItem('language') || localStorage.getItem('lang');
+  const stored = localStorage.getItem('app_lang') || localStorage.getItem('language') || localStorage.getItem('lang');
   if (stored) return stored.toUpperCase();
   return document.documentElement.lang?.toUpperCase() || 'RO';
 }
@@ -102,9 +102,51 @@ function buildMessage(format: 'whatsapp' | 'viber' | 'email'): string {
 }
 
 const FloatingButtons: React.FC = () => {
+  const [emailMenuOpen, setEmailMenuOpen] = useState(false);
+  const emailMenuRef = useRef<HTMLDivElement | null>(null);
   const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '373XXXXXXXX';
   const viberNumber = import.meta.env.VITE_VIBER_NUMBER || '373XXXXXXXX';
-  const email = import.meta.env.VITE_COMPANY_EMAIL || 'contact@rightmob.md';
+  const emailTargets = [
+    {
+      label: 'Info',
+      email: 'info@rightmob.md',
+      subject: 'Solicitare informații generale - RightMob',
+      intro: 'Doresc informații generale despre produse, showroom și colaborări.',
+    },
+    {
+      label: 'Ofertă',
+      email: 'oferta@rightmob.md',
+      subject: 'Solicitare ofertă personalizată - RightMob',
+      intro: 'Doresc o ofertă personalizată pentru mobilier la comandă.',
+    },
+    {
+      label: 'Comenzi',
+      email: 'comenzi@rightmob.md',
+      subject: 'Solicitare privind comandă/livrare - RightMob',
+      intro: 'Doresc detalii despre status comandă, livrare sau instalare.',
+    },
+  ];
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (!emailMenuRef.current) return;
+      if (!emailMenuRef.current.contains(e.target as Node)) {
+        setEmailMenuOpen(false);
+      }
+    };
+
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEmailMenuOpen(false);
+    };
+
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, []);
+
   const openWhatsApp = () => {
     sendTrack('whatsapp');
     const msg = encodeURIComponent(buildMessage('whatsapp'));
@@ -119,12 +161,19 @@ const FloatingButtons: React.FC = () => {
     const msg = encodeURIComponent(buildMessage('viber'));
     window.open(`viber://chat?number=%2B${viberNumber}&text=${msg}`, '_blank');
   };
-  const openEmail = () => {
-    sendTrack('email');
-    const subject = encodeURIComponent('Solicitare consultație – RightMob');
-    const body = encodeURIComponent(buildMessage('email'));
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}&su=${subject}&body=${body}`;
+  const openEmail = (target: { email: string; subject: string; intro: string }) => {
+    sendTrack(`email:${target.email}`);
+    const ctx = getPageContext();
+    const device = getDeviceInfo();
+    const city = getLocationFromTimezone();
+    const lang = getSiteLang();
+    const subject = encodeURIComponent(target.subject);
+    const body = encodeURIComponent(
+      `Bună ziua,\n\n${target.intro}\n${ctx.details ? `\n${ctx.details}\n` : '\n'}\nAștept mai multe detalii.\n\n---\nDispozitiv: ${device}\n${city ? `Locație aprox.: ${city}\n` : ''}Limba site: ${lang}\nPagina: ${ctx.page}\n---\n\nMulțumesc!\n`
+    );
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(target.email)}&su=${subject}&body=${body}`;
     window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+    setEmailMenuOpen(false);
   };
 
   return (
@@ -141,24 +190,48 @@ const FloatingButtons: React.FC = () => {
           </div>
         </div>
       </button>
+      <div className={`email-selector-wrapper ${emailMenuOpen ? 'open' : ''}`} ref={emailMenuRef}>
+        <button
+          className="bloom-button gmail-bloom"
+          onClick={() => setEmailMenuOpen((prev) => !prev)}
+          aria-label="Email"
+          title="Email"
+          aria-expanded={emailMenuOpen}
+          aria-haspopup="menu"
+        >
+          <div className="bloom-container">
+            <div className="button-container-main">
+              <div className="button-inner">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="svg" fill="white">
+                  <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                </svg>
+              </div>
+              <div className="bloom bloom1" /><div className="bloom bloom2" />
+            </div>
+          </div>
+        </button>
+        <div className="email-menu" role="menu" aria-label="Selectează adresa de email">
+          {emailTargets.map((target) => (
+            <button
+              key={target.email}
+              type="button"
+              role="menuitem"
+              className="email-menu-item"
+              onClick={() => openEmail(target)}
+              title={target.email}
+            >
+              <span className="email-menu-label">{target.label}</span>
+              <span className="email-menu-address">{target.email}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       <button className="bloom-button viber-bloom" onClick={openViber} aria-label="Viber" title="Viber">
         <div className="bloom-container">
           <div className="button-container-main">
             <div className="button-inner">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="svg" fill="white">
                 <path d="M11.4 0C9.473.028 5.333.344 3.02 2.467 1.302 4.187.696 6.7.633 9.817.57 12.933.488 18.776 6.12 20.36h.003l-.004 2.416s-.037.977.61 1.177c.777.242 1.234-.5 1.98-1.302.407-.44.972-1.084 1.397-1.58 3.85.323 6.812-.416 7.15-.525.776-.252 5.176-.815 5.89-6.657.734-6.014-.418-9.817-2.1-11.517C19.87.963 16.055.05 12.026 0h-.65.024zm.043 1.803h.495c3.64.043 6.91.828 8.34 2.18 1.447 1.37 2.363 4.553 1.725 9.684-.58 4.666-3.96 5.034-4.618 5.245-.3.098-3.008.773-6.315.524 0 0-2.52 3.04-3.3 3.82-.124.13-.293.17-.392.15-.13-.03-.166-.188-.165-.414l.02-4.018c-4.762-1.32-4.485-6.295-4.43-8.862.054-2.564.567-4.66 1.99-6.023 1.917-1.814 5.412-2.097 7.05-2.133v-.153zm.202 1.698c-.2.007-.357.057-.357.36 0 .304.19.332.43.332 2.36.063 4.51.67 5.994 1.955 1.49 1.29 2.03 3.083 2.097 5.42.008.23-.01.407.24.482.32.098.476-.06.49-.31.067-2.567-.6-4.63-2.31-6.113-1.718-1.488-4.134-2.128-6.584-2.125zm-3.84 2.05c-.39 0-.707.082-1.005.277l-.01.01c-.31.2-.604.44-.87.71-.26.263-.35.578-.348.873.01.585.22 1.087.596 1.64.75 1.106 1.918 2.603 3.456 4.142 1.54 1.538 3.044 2.71 4.15 3.46.554.376 1.056.587 1.64.597.296.003.61-.087.874-.348.27-.266.51-.56.71-.87l.01-.01c.197-.297.278-.614.278-1.004 0-.292-.11-.594-.398-.895-.387-.403-1.167-.957-1.77-1.414-.457-.347-.95-.328-1.295.017l-.935.935c-.26.26-.586.25-.586.25-3.083-.78-3.86-3.86-3.86-3.86s-.01-.326.25-.586l.935-.935c.346-.346.364-.84.017-1.296-.457-.602-1.01-1.382-1.413-1.77-.3-.287-.603-.398-.894-.398z" />
-              </svg>
-            </div>
-            <div className="bloom bloom1" /><div className="bloom bloom2" />
-          </div>
-        </div>
-      </button>
-      <button className="bloom-button gmail-bloom" onClick={openEmail} aria-label="Email" title="Email">
-        <div className="bloom-container">
-          <div className="button-container-main">
-            <div className="button-inner">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="svg" fill="white">
-                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
               </svg>
             </div>
             <div className="bloom bloom1" /><div className="bloom bloom2" />

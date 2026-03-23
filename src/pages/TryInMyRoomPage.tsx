@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, Upload, RotateCw, Trash2, Download, HelpCircle, X, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getApiBase } from '../lib/api';
 
 interface Product {
   id: number;
@@ -171,7 +172,7 @@ const TryInMyRoomPage: React.FC = () => {
 
   const loadProducts = async () => {
     try {
-      const response = await fetch(`http://${window.location.hostname}:3001/api/products`);
+      const response = await fetch(`${getApiBase()}/api/products`);
       if (!response.ok) throw new Error('Failed to load products');
       const data = await response.json();
       const normalized = data.map((product: any) => ({

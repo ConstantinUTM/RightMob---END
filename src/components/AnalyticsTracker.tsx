@@ -1,8 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-
-const API_BASE = `http://${window.location.hostname}:3001`;
+import { getApiBase } from '../lib/api';
 
 const AnalyticsTracker: React.FC = () => {
   const location = useLocation();
@@ -16,7 +15,7 @@ const AnalyticsTracker: React.FC = () => {
     if (lastPath.current === path) return;
     lastPath.current = path;
 
-    fetch(`${API_BASE}/api/analytics/view`, {
+    fetch(`${getApiBase()}/api/analytics/view`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path }),

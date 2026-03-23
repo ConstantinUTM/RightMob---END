@@ -40,12 +40,27 @@ const CHART_COLORS = [
   '#06b6d4', '#f97316', '#8b5cf6', '#14b8a6', '#ec4899',
   '#6366f1', '#10b981',
 ];
+
+const isUnknownAnalyticsValue = (value?: string | null) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === '' || normalized === 'unknown' || normalized === 'necunoscut' || normalized === 'n/a';
+};
+
+const formatDeviceLabel = (value?: string | null) => {
+  if (isUnknownAnalyticsValue(value)) return 'Neclasificat';
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'desktop') return 'Calculator';
+  if (normalized === 'mobile') return 'Telefon';
+  if (normalized === 'tablet') return 'Tableta';
+  return String(value || 'Neclasificat');
+};
 const getColor = (i: number) => CHART_COLORS[i % CHART_COLORS.length];
 
 const MONTHS_RO = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS_RO = ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'];
 
 type ExportPeriod = 'last_month' | 'last_6_months' | 'last_year' | 'all';
+type TrendPeriod = 'week' | 'month' | '6months' | 'year';
 
 /* ─── Helpers ─── */
 const formatPathLabel = (path: string, galleryItems: any[] = []): string => {
@@ -379,53 +394,112 @@ const LocationsPanel: React.FC<{
   );
 };
 
-/* ─── Days trend chart (last 30 days) ─── */
-const DaysTrendChart: React.FC<{ byDay: Record<string, number> }> = ({ byDay }) => {
-  const days: { date: string; count: number; label: string }[] = [];
-  const today = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const ds = getDateStr(d);
-    days.push({
-      date: ds,
-      count: byDay[ds] || 0,
-      label: `${d.getDate()} ${MONTHS_RO[d.getMonth()]}`,
-    });
-  }
-  const max = Math.max(...days.map((d) => d.count), 1);
-  const tickIndexes = [0, 6, 12, 18, 24, 29];
+/* ─── Unified flexible trend chart ─── */
+type TrendBar = { key: string; count: number; label: string; isToday?: boolean };
 
-  const maxBarH = 120; // px
+const FlexTrendChart: React.FC<{ byDay: Record<string, number>; period: TrendPeriod }> = ({ byDay, period }) => {
+  const bars = useMemo<TrendBar[]>(() => {
+    const today = new Date();
+    const todayStr = getDateStr(today);
+
+    if (period === 'week' || period === 'month') {
+      const daysCount = period === 'week' ? 7 : 30;
+      const result: TrendBar[] = [];
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const ds = getDateStr(d);
+        result.push({
+          key: ds,
+          count: byDay[ds] || 0,
+          label: `${d.getDate()} ${MONTHS_RO[d.getMonth()]}`,
+          isToday: ds === todayStr,
+        });
+      }
+      return result;
+    }
+
+    if (period === '6months') {
+      const weekMap: Record<string, { count: number; label: string }> = {};
+      const ordered: string[] = [];
+      for (let i = 179; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const wk = getWeekKey(d);
+        if (!weekMap[wk]) {
+          weekMap[wk] = { count: 0, label: `${d.getDate()} ${MONTHS_RO[d.getMonth()]}` };
+          ordered.push(wk);
+        }
+        weekMap[wk].count += byDay[getDateStr(d)] || 0;
+      }
+      return ordered.map((wk, i) => ({
+        key: wk,
+        count: weekMap[wk].count,
+        label: `Săpt. ${weekMap[wk].label}`,
+        isToday: i === ordered.length - 1,
+      }));
+    }
+
+    // year: group by month
+    const monthMap: Record<string, { count: number; label: string }> = {};
+    const orderedM: string[] = [];
+    for (let i = 364; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const mk = getMonthKey(d);
+      if (!monthMap[mk]) {
+        monthMap[mk] = { count: 0, label: `${MONTHS_RO[d.getMonth()]} ${d.getFullYear()}` };
+        orderedM.push(mk);
+      }
+      monthMap[mk].count += byDay[getDateStr(d)] || 0;
+    }
+    return orderedM.map((mk, i) => ({
+      key: mk,
+      count: monthMap[mk].count,
+      label: monthMap[mk].label,
+      isToday: i === orderedM.length - 1,
+    }));
+  }, [byDay, period]);
+
+  const max = Math.max(...bars.map((b) => b.count), 1);
+  const maxBarH = 120;
+  const total = bars.reduce((s, b) => s + b.count, 0);
+  const avgPerBar = bars.length > 0 ? (total / bars.length).toFixed(1) : '0';
+  const tickCount = 6;
+  const tickIndexes = bars.length <= tickCount
+    ? bars.map((_, i) => i)
+    : Array.from({ length: tickCount }, (_, i) => Math.round((i / (tickCount - 1)) * (bars.length - 1)));
+
   return (
     <div>
+      <div className="flex gap-2 mb-3 text-xs">
+        <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full font-medium">
+          Total: {total}
+        </span>
+        <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full">
+          Medie/{period === 'year' ? 'lună' : period === '6months' ? 'săpt.' : 'zi'}: {avgPerBar}
+        </span>
+      </div>
       <div className="flex items-end gap-[3px]" style={{ height: maxBarH + 20 }}>
-        {days.map((d, i) => {
-          const barH = d.count > 0 ? Math.max(Math.round((d.count / max) * maxBarH), 8) : 3;
-          const isToday = i === days.length - 1;
+        {bars.map((b) => {
+          const barH = b.count > 0 ? Math.max(Math.round((b.count / max) * maxBarH), 8) : 3;
           return (
-            <div key={d.date} className="flex-1 flex flex-col items-end justify-end group relative" style={{ height: maxBarH + 20 }}>
+            <div key={b.key} className="flex-1 flex flex-col items-end justify-end group relative" style={{ height: maxBarH + 20 }}>
               <div
-                className={`w-full rounded-t-sm transition-all duration-300 ${isToday ? 'ring-2 ring-blue-400 ring-offset-1' : ''}`}
-                style={{
-                  height: barH,
-                  background: isToday ? '#2563eb' : d.count > 0 ? '#3b82f6' : '#e5e7eb',
-                }}
+                className={`w-full rounded-t-sm transition-all duration-300 ${b.isToday ? 'ring-2 ring-blue-400 ring-offset-1' : ''}`}
+                style={{ height: barH, background: b.isToday ? '#2563eb' : b.count > 0 ? '#3b82f6' : '#e5e7eb' }}
               />
               <div className="absolute -top-8 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
-                {d.label}: {d.count} vizionări
+                {b.label}: {b.count} vizionări
               </div>
             </div>
           );
         })}
       </div>
-      <div className="grid grid-cols-6 mt-1 text-[9px] text-gray-400">
-        {tickIndexes.map((idx, tickIdx) => (
-          <span
-            key={idx}
-            className={`${tickIdx === 0 ? 'text-left' : tickIdx === tickIndexes.length - 1 ? 'text-right' : 'text-center'} whitespace-nowrap`}
-          >
-            {idx === 29 ? 'Astăzi' : days[idx]?.label}
+      <div className="flex justify-between mt-1 text-[9px] text-gray-400 px-0.5">
+        {tickIndexes.map((idx, ti) => (
+          <span key={idx} className={ti === 0 ? 'text-left' : ti === tickIndexes.length - 1 ? 'text-right' : 'text-center'}>
+            {bars[idx]?.isToday ? 'Azi' : bars[idx]?.label}
           </span>
         ))}
       </div>
@@ -568,15 +642,15 @@ const PerPageAnalytics: React.FC<{
 
           <div>
             <p className="text-xs text-gray-500 mb-2">Trend pe perioada selectată</p>
-            <div className="flex items-end gap-[2px] h-20">
+            <div className="flex items-end gap-[2px] h-24 rounded-lg border border-indigo-100 bg-white/75 px-2 py-2">
               {pageDailyData.map((d) => {
                 const max = Math.max(...pageDailyData.map((x) => x.count), 1);
-                const pct = (d.count / max) * 100;
+                const pct = Math.sqrt(d.count / max) * 100;
                 return (
                   <div key={d.date} className="flex-1 group relative">
                     <div
-                      className="w-full rounded-t min-h-[2px]"
-                      style={{ height: `${Math.max(pct, 2)}%`, background: d.count > 0 ? '#6366f1' : '#e5e7eb' }}
+                      className="w-full rounded-t min-h-[3px]"
+                      style={{ height: `${Math.max(pct, 4)}%`, background: d.count > 0 ? '#6366f1' : '#e5e7eb' }}
                     />
                     <div className="absolute -top-8 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
                       {d.label}: {d.count}
@@ -594,13 +668,14 @@ const PerPageAnalytics: React.FC<{
           {Object.keys(pageHourly).length > 0 && (
             <div>
               <p className="text-xs text-gray-500 mb-2">Distribuție pe ore</p>
-              <div className="flex items-end gap-[2px] h-16">
+              <div className="flex items-end gap-[2px] h-20 rounded-lg border border-violet-100 bg-white/75 px-2 py-2">
                 {Array.from({ length: 24 }, (_, h) => {
                   const val = pageHourly[h] || 0;
                   const mx = Math.max(...Object.values(pageHourly), 1);
+                  const scaled = Math.sqrt(val / mx) * 100;
                   return (
                     <div key={h} className="flex-1 group relative">
-                      <div className="w-full rounded-t min-h-[1px]" style={{ height: `${Math.max((val / mx) * 100, 2)}%`, background: val > 0 ? '#8b5cf6' : '#e5e7eb' }} />
+                      <div className="w-full rounded-t min-h-[2px]" style={{ height: `${Math.max(scaled, 4)}%`, background: val > 0 ? '#8b5cf6' : '#e5e7eb' }} />
                       <div className="absolute -top-8 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
                         {h}:00 – {val}
                       </div>
@@ -749,9 +824,8 @@ const AdminAnalyticsPage: React.FC = () => {
   const [showExport, setShowExport] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'pages' | 'locations' | 'recent'>('overview');
   const [recentFilter, setRecentFilter] = useState<ExportPeriod>('all');
-  const [compareMode, setCompareMode] = useState<'month' | 'week'>('month');
-  const [selectedMonthKey, setSelectedMonthKey] = useState('');
-  const [selectedWeekKey, setSelectedWeekKey] = useState('');
+  const [recentLimit, setRecentLimit] = useState(50);
+  const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>('month');
 
   useEffect(() => {
     const load = async () => {
@@ -814,12 +888,44 @@ const AdminAnalyticsPage: React.FC = () => {
 
     const uniqueCountries = Object.keys(analytics.byCountry || {}).length;
     const uniqueCities = Object.keys(analytics.byCity || {}).length;
-    const uniqueRegions = Object.keys(analytics.byRegion || {}).length;
-    const uniqueDevices = Object.keys(analytics.byDevice || {}).length;
+    const activeDays = Math.max(1, Object.keys(analytics.byDay || {}).length);
+    const regionEntries = Object.entries(analytics.byRegion || {}).sort((a, b) => b[1] - a[1]);
+    const deviceEntries = Object.entries(analytics.byDevice || {}).sort((a, b) => b[1] - a[1]);
+    const knownRegionEntries = regionEntries.filter(([region]) => !isUnknownAnalyticsValue(region));
+    const knownDeviceEntries = deviceEntries.filter(([device]) => !isUnknownAnalyticsValue(device));
+    const unknownRegionViews = regionEntries
+      .filter(([region]) => isUnknownAnalyticsValue(region))
+      .reduce((sum, [, count]) => sum + count, 0);
+    const unknownDeviceViews = deviceEntries
+      .filter(([device]) => isUnknownAnalyticsValue(device))
+      .reduce((sum, [, count]) => sum + count, 0);
+    const uniqueRegions = knownRegionEntries.length;
+    const uniqueDevices = knownDeviceEntries.length;
     const uniquePages = Object.keys(analytics.byPath || {}).length;
     const peakHour = Object.entries(analytics.byHour || {}).sort((a, b) => b[1] - a[1])[0];
-    const topRegion = Object.entries(analytics.byRegion || {}).sort((a, b) => b[1] - a[1])[0] || null;
-    const topDevice = Object.entries(analytics.byDevice || {}).sort((a, b) => b[1] - a[1])[0] || null;
+    const topRegion = knownRegionEntries[0] || null;
+    const topDevice = knownDeviceEntries[0] || null;
+    const knownRegionViews = knownRegionEntries.reduce((sum, [, count]) => sum + count, 0);
+    const knownDeviceViews = knownDeviceEntries.reduce((sum, [, count]) => sum + count, 0);
+    const totalDeviceViews = knownDeviceViews + unknownDeviceViews;
+    const geoCoveragePct = total > 0 ? Math.round((knownRegionViews / total) * 100) : 0;
+    const classifiedDevicePct = total > 0 ? Math.round((knownDeviceViews / total) * 100) : 0;
+    const deviceTypeCount = knownDeviceEntries.length + (unknownDeviceViews > 0 ? 1 : 0);
+    const avgViewsPerDeviceType = deviceTypeCount > 0 ? Math.round(totalDeviceViews / deviceTypeCount) : 0;
+    const deviceBreakdown = [
+      ...knownDeviceEntries.map(([device, count]) => ({
+      device: formatDeviceLabel(device),
+      count,
+      share: total > 0 ? Math.round((count / total) * 100) : 0,
+      avgPerDay: Number((count / activeDays).toFixed(1)),
+      })),
+      ...(unknownDeviceViews > 0 ? [{
+        device: 'Neclasificat',
+        count: unknownDeviceViews,
+        share: total > 0 ? Math.round((unknownDeviceViews / total) * 100) : 0,
+        avgPerDay: Number((unknownDeviceViews / activeDays).toFixed(1)),
+      }] : []),
+    ];
 
     return {
       total,
@@ -839,7 +945,16 @@ const AdminAnalyticsPage: React.FC = () => {
       uniquePages,
       peakHour,
       topRegion,
-      topDevice
+      topDevice,
+      unknownRegionViews,
+      unknownDeviceViews,
+      knownRegionViews,
+      knownDeviceViews,
+      totalDeviceViews,
+      geoCoveragePct,
+      classifiedDevicePct,
+      avgViewsPerDeviceType,
+      deviceBreakdown
     };
   }, [analytics]);
 
@@ -904,64 +1019,6 @@ const AdminAnalyticsPage: React.FC = () => {
 
     return { monthSeries, weekSeries, bestMonth, bestWeek };
   }, [analytics]);
-
-  useEffect(() => {
-    if (!comparativeStats) return;
-    const lastMonth = comparativeStats.monthSeries[comparativeStats.monthSeries.length - 1]?.key || '';
-    const lastWeek = comparativeStats.weekSeries[comparativeStats.weekSeries.length - 1]?.key || '';
-
-    if (lastMonth && (!selectedMonthKey || !comparativeStats.monthSeries.some((x) => x.key === selectedMonthKey))) {
-      setSelectedMonthKey(lastMonth);
-    }
-    if (lastWeek && (!selectedWeekKey || !comparativeStats.weekSeries.some((x) => x.key === selectedWeekKey))) {
-      setSelectedWeekKey(lastWeek);
-    }
-  }, [comparativeStats, selectedMonthKey, selectedWeekKey]);
-
-  const selectedPeriodStats = useMemo(() => {
-    if (!analytics || !comparativeStats) return null;
-
-    const series = compareMode === 'month' ? comparativeStats.monthSeries : comparativeStats.weekSeries;
-    const selectedKey = compareMode === 'month' ? selectedMonthKey : selectedWeekKey;
-    const idx = series.findIndex((x) => x.key === selectedKey);
-    const current = idx >= 0 ? series[idx] : null;
-    const previous = idx > 0 ? series[idx - 1] : null;
-
-    let trend = 0;
-    if (current) {
-      if ((previous?.count || 0) > 0) trend = Math.round((((current.count - (previous?.count || 0)) / (previous?.count || 1)) * 100));
-      else if (current.count > 0) trend = 100;
-    }
-
-    const now = new Date();
-    const inSelectedRange = (ts: string) => {
-      const d = new Date(ts);
-      if (compareMode === 'month' && current) {
-        const [y, m] = current.key.split('-').map(Number);
-        return d.getFullYear() === y && d.getMonth() === m - 1;
-      }
-      if (compareMode === 'week' && current) {
-        const start = new Date(`${current.key}T00:00:00`);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 7);
-        return d >= start && d < end;
-      }
-      return d <= now;
-    };
-
-    const byHour: Record<number, number> = {};
-    (analytics.recent || []).forEach((v) => {
-      if (!inSelectedRange(v.ts)) return;
-      const h = new Date(v.ts).getHours();
-      byHour[h] = (byHour[h] || 0) + 1;
-    });
-
-    const peakHour = Object.entries(byHour)
-      .map(([h, c]) => ({ hour: Number(h), count: c }))
-      .sort((a, b) => b.count - a.count)[0] || null;
-
-    return { current, previous, trend, peakHour, series };
-  }, [analytics, comparativeStats, compareMode, selectedMonthKey, selectedWeekKey]);
 
   if (!analytics) {
     return (
@@ -1032,7 +1089,7 @@ const AdminAnalyticsPage: React.FC = () => {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {stats && (
-            <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 icon={<Eye className="w-5 h-5 text-blue-600" />}
                 label="Total vizionări"
@@ -1064,54 +1121,103 @@ const AdminAnalyticsPage: React.FC = () => {
                 sub={`6 luni anterioare: ${stats.last6m}`}
                 color="#f43f5e"
               />
-              <StatCard
-                icon={<Globe className="w-5 h-5 text-orange-600" />}
-                label="Locații unice"
-                value={`${stats.uniqueCities} orașe`}
-                sub={`${stats.uniqueCountries} țări${stats.peakHour ? ` · Vârf: ${stats.peakHour[0]}:00` : ''}`}
-                color="#f97316"
-              />
-              <StatCard
-                icon={<MapPin className="w-5 h-5 text-cyan-600" />}
-                label="Regiune"
-                value={stats.topRegion ? stats.topRegion[0] : 'N/A'}
-                sub={`${stats.topRegion ? stats.topRegion[1] : 0} vizionări · ${stats.uniqueRegions} regiuni`}
-                color="#0891b2"
-              />
-              <StatCard
-                icon={<Activity className="w-5 h-5 text-violet-600" />}
-                label="Dispozitiv"
-                value={stats.topDevice ? stats.topDevice[0] : 'Unknown'}
-                sub={`${stats.topDevice ? stats.topDevice[1] : 0} vizionări · ${stats.uniqueDevices} tipuri`}
-                color="#7c3aed"
-              />
             </div>
           )}
 
-          {comparativeStats && selectedPeriodStats && (
+          {stats && (
+            <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-6">
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Distribuție pe dispozitive</h2>
+                    <p className="text-sm text-gray-500">Procente, volum și medie zilnică din totalul vizionărilor, inclusiv cele neclasificate.</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Total dispozitive</p>
+                    <p className="text-lg font-semibold text-gray-900">{stats.totalDeviceViews}</p>
+                  </div>
+                </div>
+
+                {stats.deviceBreakdown.length > 0 ? (
+                  <div className="space-y-3">
+                    {stats.deviceBreakdown.map((item) => (
+                      <div key={item.device} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{item.device}</p>
+                            <p className="text-xs text-gray-500">{item.count} vizionări · medie {item.avgPerDay}/zi</p>
+                          </div>
+                          <span className="text-sm font-semibold text-violet-700">{item.share}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-violet-100 overflow-hidden">
+                          <div className="h-full rounded-full bg-violet-500" style={{ width: `${item.share}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
+                    Nu există încă suficiente date clasificate pe dispozitive.
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Detalii locație</h2>
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Vizionări localizate</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.knownRegionViews}</p>
+                    <p className="text-xs text-gray-500 mt-1">{stats.geoCoveragePct}% din total au locație detectată.</p>
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Țări detectate</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.uniqueCountries}</p>
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Orașe detectate</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.uniqueCities}</p>
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Regiuni valide</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.uniqueRegions}</p>
+                    <p className="text-xs text-gray-500 mt-1">{stats.topRegion ? `Cea mai activă: ${stats.topRegion[0]} (${stats.topRegion[1]})` : 'Fără regiuni detectate încă'}</p>
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Vizionări fără geolocalizare</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.unknownRegionViews}</p>
+                    <p className="text-xs text-gray-500 mt-1">Acestea nu au IP geolocalizabil sau provin din medii locale/proxy.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {comparativeStats && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-indigo-600" />
-                  Comparații lunare și săptămânale
+                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                  Trend vizionări
                 </h2>
                 <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
-                  <button
-                    onClick={() => setCompareMode('month')}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md ${compareMode === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                  >
-                    Pe lună
-                  </button>
-                  <button
-                    onClick={() => setCompareMode('week')}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md ${compareMode === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                  >
-                    Pe săptămână
-                  </button>
+                  {(['week', 'month', '6months', 'year'] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setTrendPeriod(p)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all
+                        ${trendPeriod === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}
+                      `}
+                    >
+                      {p === 'week' ? 'Săpt.' : p === 'month' ? 'Lună' : p === '6months' ? '6 luni' : 'An'}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+              <FlexTrendChart byDay={analytics.byDay} period={trendPeriod} />
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
                 <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
                   <p className="text-xs text-gray-500 mb-1">Cea mai bună lună</p>
                   <p className="text-sm font-semibold text-gray-900">{comparativeStats.bestMonth?.label || 'N/A'}</p>
@@ -1123,104 +1229,27 @@ const AdminAnalyticsPage: React.FC = () => {
                   <p className="text-xs text-gray-500 mt-1">{comparativeStats.bestWeek?.count || 0} vizionări</p>
                 </div>
                 <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                  <p className="text-xs text-gray-500 mb-1">Diferență vs perioada anterioară</p>
-                  <p className={`text-sm font-semibold ${selectedPeriodStats.trend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {selectedPeriodStats.trend >= 0 ? '+' : ''}{selectedPeriodStats.trend}%
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {selectedPeriodStats.current?.count || 0} vs {selectedPeriodStats.previous?.count || 0}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div className="rounded-xl border border-gray-100 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-semibold text-gray-900">Trend comparativ</p>
-                    {compareMode === 'month' ? (
-                      <select
-                        value={selectedMonthKey}
-                        onChange={(e) => setSelectedMonthKey(e.target.value)}
-                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
-                      >
-                        {comparativeStats.monthSeries.slice(-12).map((m) => (
-                          <option key={m.key} value={m.key}>{m.label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <select
-                        value={selectedWeekKey}
-                        onChange={(e) => setSelectedWeekKey(e.target.value)}
-                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
-                      >
-                        {comparativeStats.weekSeries.slice(-12).map((w) => (
-                          <option key={w.key} value={w.key}>{w.label}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    {(compareMode === 'month' ? comparativeStats.monthSeries.slice(-12) : comparativeStats.weekSeries.slice(-12)).map((item) => {
-                      const maxVal = Math.max(...(compareMode === 'month' ? comparativeStats.monthSeries : comparativeStats.weekSeries).map((x) => x.count), 1);
-                      const width = Math.round((item.count / maxVal) * 100);
-                      const isSelected = (compareMode === 'month' ? selectedMonthKey : selectedWeekKey) === item.key;
-                      return (
-                        <div key={item.key} className={`rounded-lg p-2 ${isSelected ? 'bg-blue-50 border border-blue-100' : ''}`}>
-                          <div className="flex items-center justify-between gap-2 text-xs mb-1">
-                            <span className="text-gray-600 truncate">{item.label}</span>
-                            <span className="font-semibold text-gray-800">{item.count}</span>
-                          </div>
-                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-blue-500" style={{ width: `${Math.max(width, item.count > 0 ? 2 : 0)}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-gray-100 p-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-3">Detalii perioadă selectată</p>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Perioadă</span>
-                      <span className="font-medium text-gray-900">{selectedPeriodStats.current?.label || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Vizionări</span>
-                      <span className="font-medium text-gray-900">{selectedPeriodStats.current?.count || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Cea mai bună zi</span>
-                      <span className="font-medium text-gray-900">
-                        {selectedPeriodStats.current?.bestDay ? `${new Date(`${selectedPeriodStats.current.bestDay.day}T00:00:00`).toLocaleDateString('ro-RO')} (${selectedPeriodStats.current.bestDay.count})` : 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Ora de vârf</span>
-                      <span className="font-medium text-gray-900">
-                        {selectedPeriodStats.peakHour ? `${selectedPeriodStats.peakHour.hour}:00 (${selectedPeriodStats.peakHour.count})` : 'Date insuficiente'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 pt-1">
-                      Diferențele sunt calculate față de perioada anterioară echivalentă.
-                    </p>
-                  </div>
+                  <p className="text-xs text-gray-500 mb-1">Lună curentă vs anterioară</p>
+                  {(() => {
+                    const ms = comparativeStats.monthSeries;
+                    const last = ms[ms.length - 1];
+                    const prev = ms[ms.length - 2];
+                    const trend = last && prev && prev.count > 0
+                      ? Math.round(((last.count - prev.count) / prev.count) * 100)
+                      : (last?.count || 0) > 0 ? 100 : 0;
+                    return (
+                      <>
+                        <p className={`text-sm font-semibold ${trend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                          {trend >= 0 ? '+' : ''}{trend}%
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">{last?.count || 0} vs {prev?.count || 0} vizionări</p>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
           )}
-
-          {/* Trend last 30 days */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              Trend vizionări (ultimele 30 zile)
-            </h2>
-            <DaysTrendChart byDay={analytics.byDay} />
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Calendar heatmap */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
@@ -1391,7 +1420,7 @@ const AdminAnalyticsPage: React.FC = () => {
               ]).map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setRecentFilter(opt.value)}
+                  onClick={() => { setRecentFilter(opt.value); setRecentLimit(50); }}
                   className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all
                     ${recentFilter === opt.value ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}
                   `}
@@ -1415,7 +1444,7 @@ const AdminAnalyticsPage: React.FC = () => {
                 {filteredRecent.length === 0 ? (
                   <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Nicio vizionare în această perioadă.</td></tr>
                 ) : (
-                  filteredRecent.map((r, i) => {
+                filteredRecent.slice(0, recentLimit).map((r, i) => {
                     const d = new Date(r.ts);
                     const dateStr = d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
                     const timeStr = d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
@@ -1444,14 +1473,26 @@ const AdminAnalyticsPage: React.FC = () => {
               </tbody>
             </table>
             {filteredRecent.length > 0 && (
-              <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 flex items-center justify-between">
-                <span>Afișate {filteredRecent.length} vizionări</span>
-                <button
-                  onClick={() => { setShowExport(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  <Download className="w-3 h-3" /> Exportă
-                </button>
+              <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+                <div className="flex items-center justify-between">
+                  <span>Afișate {Math.min(recentLimit, filteredRecent.length)} din {filteredRecent.length} vizionări</span>
+                  <button
+                    onClick={() => { setShowExport(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <Download className="w-3 h-3" /> Exportă
+                  </button>
+                </div>
+                {filteredRecent.length > recentLimit && (
+                  <div className="mt-2 flex justify-center">
+                    <button
+                      onClick={() => setRecentLimit((prev) => Math.min(prev + 100, filteredRecent.length))}
+                      className="px-4 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium rounded-lg transition-colors"
+                    >
+                      Arată mai multe ({Math.min(100, filteredRecent.length - recentLimit)} din {filteredRecent.length - recentLimit} rămase)
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

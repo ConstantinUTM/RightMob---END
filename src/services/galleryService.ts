@@ -89,6 +89,7 @@ export async function updateGalleryItem(
     newExtraImages?: Array<{ filename: string; data: string }>;
     setMainImageUrl?: string;
     removeImageUrls?: string[];
+    imageOrderUrls?: string[];
     visible?: boolean;
     reviews?: Array<{ text: string; author?: string; date?: string; visible: boolean }>;
   },

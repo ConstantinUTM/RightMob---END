@@ -1,10 +1,15 @@
 {
   "translations": {
     "ro": {
-      "videoSection.title": "Excelență înfiecare detaliu"
+      "videoSection.title": "Excelență în fiecare detaliu",
+      "about.deliverySteps.step1.desc": "Confirmare rapida",
+      "about.deliverySteps.step3.desc": "Transport la domiciliu"
     },
     "en": {},
     "ru": {}
   },
-  "images": {}
+  "images": {
+    "about.videoFile": "/uploads/site-content/1774293810691-2026-02-16_20.21.23.mp4",
+    "home.videoFile": "/uploads/site-content/1773941778712-2026-02-16_20.20.26.mp4"
+  }
 }

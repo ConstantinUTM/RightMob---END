@@ -6,9 +6,56 @@ import { useSiteContent } from '../contexts/SiteContentContext';
 
 const ACCENT = '#374151';
 const RED = '#dc2626';
+const BLUE = '#1d4ed8';
 const CREAM = '#FAF8F5';
 const CHARCOAL = '#1a1a1a';
 const WARM_GREY = '#5c5c5c';
+
+const SUPPORT_EMAILS = [
+  {
+    type: 'info' as const,
+    label: 'Informații generale',
+    email: 'info@rightmob.md',
+    note: 'Întrebări despre produse, showroom și colaborări.',
+  },
+  {
+    type: 'offer' as const,
+    label: 'Oferte personalizate',
+    email: 'oferta@rightmob.md',
+    note: 'Solicitări de preț pentru mobilier la comandă.',
+  },
+  {
+    type: 'orders' as const,
+    label: 'Comenzi',
+    email: 'comenzi@rightmob.md',
+    note: 'Status comandă, livrare și instalare.',
+  },
+];
+
+const LOGO_COLOR_ORDER = [RED, BLUE, RED] as const;
+
+const iconByType = {
+  info: (
+    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M12 11V16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <circle cx="12" cy="8" r="1" fill="currentColor" />
+    </svg>
+  ),
+  offer: (
+    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" aria-hidden>
+      <path d="M4.5 8.5V6a1.5 1.5 0 011.5-1.5h9.2c.4 0 .78.16 1.06.44l3.3 3.3c.28.28.44.66.44 1.06V18A1.5 1.5 0 0118.5 19.5H6A1.5 1.5 0 014.5 18v-2.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 12h6M9 15h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  ),
+  orders: (
+    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" aria-hidden>
+      <path d="M3.5 8.5l8.5-4 8.5 4-8.5 4-8.5-4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M3.5 8.5V16l8.5 4 8.5-4V8.5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M12 12.5V20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  ),
+};
 
 const ContactPage: React.FC = () => {
   const { t } = useLanguage();
@@ -44,6 +91,53 @@ const ContactPage: React.FC = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  const buildGmailCardUrl = (type: 'info' | 'offer' | 'orders', targetEmail: string) => {
+    const device = /iPhone/i.test(navigator.userAgent) ? 'iPhone' : /iPad/i.test(navigator.userAgent) ? 'iPad' : /Android/i.test(navigator.userAgent) ? 'Android' : 'Desktop';
+    const city = (() => {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop()?.replace(/_/g, ' ') || '';
+      } catch {
+        return '';
+      }
+    })();
+    const lang = (localStorage.getItem('app_lang') || localStorage.getItem('language') || localStorage.getItem('lang') || 'ro').toUpperCase();
+
+    const contentByType = {
+      info: {
+        subject: 'Solicitare informații generale - RightMob',
+        intro: 'Doresc informații generale despre produse, showroom și colaborări.',
+      },
+      offer: {
+        subject: 'Solicitare ofertă personalizată - RightMob',
+        intro: 'Doresc o ofertă personalizată pentru mobilier la comandă.',
+      },
+      orders: {
+        subject: 'Solicitare privind comandă/livrare - RightMob',
+        intro: 'Doresc detalii despre status comandă, livrare sau instalare.',
+      },
+    };
+
+    const selected = contentByType[type];
+    const body = [
+      'Bună ziua,',
+      '',
+      selected.intro,
+      '',
+      'Aștept mai multe detalii.',
+      '',
+      '---',
+      `Dispozitiv: ${device}`,
+      city ? `Locație aprox.: ${city}` : '',
+      `Limba site: ${lang}`,
+      `Pagina: ${window.location.pathname}`,
+      '---',
+      '',
+      'Mulțumesc!',
+    ].filter(Boolean).join('\n');
+
+    return `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(targetEmail)}&su=${encodeURIComponent(selected.subject)}&body=${encodeURIComponent(body)}`;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -83,7 +177,7 @@ const ContactPage: React.FC = () => {
           src={heroImage}
           alt="Contact"
           className="absolute inset-0 w-full h-full object-cover rounded-t-none rounded-b-3xl"
-          fetchPriority="high"
+          fetchpriority="high"
           loading="eager"
           onError={(e) => {
             const el = e.target as HTMLImageElement;
@@ -263,6 +357,62 @@ const ContactPage: React.FC = () => {
               </div>
             </div>
           </motion.div>
+
+          {/* Emailuri dedicate - secțiune separată */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="mb-16"
+          >
+            <div className="relative rounded-3xl p-6 md:p-8 border overflow-hidden" style={{ borderColor: 'rgba(26,26,26,0.08)', background: 'linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)' }}>
+              <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(220,38,38,0.10)' }} />
+              <div className="absolute -bottom-20 -right-16 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(37,99,235,0.10)' }} />
+
+              <div className="relative z-10">
+              <div className="mb-6">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-500 mb-2">
+                  Emailuri dedicate
+                </p>
+                <h3 className="text-2xl md:text-[32px] font-serif font-bold" style={{ color: CHARCOAL }}>
+                  Alege adresa corectă pentru răspuns rapid
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {SUPPORT_EMAILS.map((item, idx) => {
+                  const accent = LOGO_COLOR_ORDER[idx % LOGO_COLOR_ORDER.length];
+                  return (
+                    <motion.a
+                      key={item.email}
+                      href={buildGmailCardUrl(item.type, item.email)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, delay: 0.08 + idx * 0.05 }}
+                      className="group relative rounded-2xl p-5 border bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden"
+                      style={{ borderColor: `${accent}26`, boxShadow: '0 10px 24px rgba(15,23,42,0.08)' }}
+                    >
+                      <div className="absolute left-0 top-0 h-full w-1" style={{ background: accent }} />
+                      <div className="inline-flex items-center justify-center rounded-xl w-11 h-11 mb-3" style={{ background: `${accent}18`, color: accent }}>
+                        {iconByType[item.type]}
+                      </div>
+                      <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-neutral-500 mb-1">
+                        {item.label}
+                      </p>
+                      <p className="text-sm font-semibold break-all transition-colors" style={{ color: accent }}>
+                        {item.email}
+                      </p>
+                      <p className="text-xs text-neutral-500 leading-relaxed mt-2">
+                        {item.note}
+                      </p>
+                    </motion.a>
+                  );
+                })}
+              </div>
+              </div>
+            </div>
+          </motion.section>
 
           <div className="h-px w-16 mb-12" style={{ backgroundColor: ACCENT }} aria-hidden />
 

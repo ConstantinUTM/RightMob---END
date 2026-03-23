@@ -12,15 +12,17 @@ import {
 } from 'lucide-react';
 import { useAuth, getAdminToken } from '../contexts/AuthContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
+import { getApiBase } from '../lib/api';
 
-const API_URL = `http://${window.location.hostname}:3001`;
+const API_URL = getApiBase();
 
 // Încarcă setările de la server cu token din sesiune
 const loadAdminSettingsFromServer = async () => {
   try {
+    const token = getAdminToken() || '';
     const response = await fetch(`${API_URL}/api/admin/settings`, {
       headers: {
-        'x-admin-token': getAdminToken()
+        'x-admin-token': token
       }
     });
     if (response.ok) {
@@ -35,18 +37,21 @@ const loadAdminSettingsFromServer = async () => {
   // Fallback la localStorage dacă serverul nu e disponibil
   return {
     profile: getAdminProfileFromLocalStorage(),
-    credentials: getAdminCredentialsFromLocalStorage()
+    credentials: getAdminCredentialsFromLocalStorage(),
+    notificationsEmail: '',
+    notificationsPhone: ''
   };
 };
 
 // Salvează setările pe server
 const saveAdminSettingsToServer = async (profile: any, credentials: any, notificationsEmail?: string, notificationsPhone?: string) => {
   try {
+    const token = getAdminToken() || '';
     const response = await fetch(`${API_URL}/api/admin/settings`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'x-admin-token': getAdminToken()
+        'x-admin-token': token
       },
       body: JSON.stringify({
         profile,
@@ -85,13 +90,8 @@ const getAdminProfileFromLocalStorage = () => {
 };
 
 const getAdminCredentialsFromLocalStorage = () => {
-  const stored = localStorage.getItem('adminCredentials');
-  if (stored) {
-    return JSON.parse(stored);
-  }
   return {
     email: 'admin@luxmobila.com',
-    password: 'admin123',
     uid: 'mock-admin-uid'
   };
 };
@@ -115,7 +115,6 @@ const AdminSettings: React.FC = () => {
   });
   const [storedCredentials, setStoredCredentials] = useState<{
     email: string;
-    password: string;
     uid?: string;
   } | null>(null);
 
@@ -186,17 +185,18 @@ const AdminSettings: React.FC = () => {
       return false;
     }
 
-    if (newPassword.length < 6) {
-      alert('Noua parolă trebuie să aibă cel puțin 6 caractere!');
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^a-zA-Z0-9]/.test(newPassword)) {
+      alert('Noua parolă trebuie să aibă minim 8 caractere și să includă literă mare, literă mică, cifră și simbol.');
       return false;
     }
 
     try {
+      const token = getAdminToken() || '';
       const response = await fetch(`${API_URL}/api/admin/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-token': getAdminToken()
+          'x-admin-token': token
         },
         body: JSON.stringify({ currentPassword, newPassword })
       });
@@ -227,7 +227,7 @@ const AdminSettings: React.FC = () => {
     let serverRunning = false;
     try {
       console.log('🔵 Testing server connection...');
-      const testResponse = await fetch(`${API_URL}/api/test`, { 
+      const testResponse = await fetch(`${API_URL}/api/health`, { 
         method: 'GET',
         signal: AbortSignal.timeout(3000) 
       });
@@ -500,13 +500,7 @@ const AdminSettings: React.FC = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    const nextValue = !showCurrentPassword;
-                    setShowCurrentPassword(nextValue);
-                    if (nextValue && !formData.currentPassword && storedCredentials?.password) {
-                      setFormData({ ...formData, currentPassword: storedCredentials.password });
-                    }
-                  }}
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -567,6 +561,7 @@ const AdminSettings: React.FC = () => {
             {formData.newPassword && formData.confirmPassword && formData.newPassword !== formData.confirmPassword && (
               <p className="text-sm text-red-600">Parolele nu se potrivesc</p>
             )}
+            <p className="text-sm text-gray-500">Folosește minim 8 caractere, cu literă mare, literă mică, cifră și simbol.</p>
           </div>
         </div>
 

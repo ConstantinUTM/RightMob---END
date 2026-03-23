@@ -117,6 +117,67 @@
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(254, 226, 226, 0.18) 100%);
 }
 
+.email-selector-wrapper {
+  position: relative;
+}
+
+.email-menu {
+  position: absolute;
+  right: 70px;
+  top: 50%;
+  transform: translateY(-50%) translateX(8px);
+  min-width: 260px;
+  max-width: min(78vw, 320px);
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.97);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10;
+}
+
+.email-selector-wrapper.open .email-menu {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+  pointer-events: auto;
+}
+
+.email-menu-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: background-color 0.16s ease;
+}
+
+.email-menu-item:hover {
+  background: rgba(29, 78, 216, 0.08);
+}
+
+.email-menu-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(220, 38, 38, 0.95);
+}
+
+.email-menu-address {
+  font-size: 13px;
+  color: #1f2937;
+}
+
 /* SVG Icon */
 .bloom-button .bloom-container .button-container-main .button-inner .svg {
   fill: #ffffff;
@@ -238,5 +299,11 @@
   .bloom-button .bloom-container .bloom2 {
     width: 8px;
     height: 8px;
+  }
+
+  .email-menu {
+    right: 58px;
+    min-width: 220px;
+    max-width: min(76vw, 280px);
   }
 }

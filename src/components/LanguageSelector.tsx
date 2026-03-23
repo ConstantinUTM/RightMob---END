@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Globe } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -15,8 +16,10 @@ interface LanguageSelectorProps {
 
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({ dark }) => {
   const { language, setLanguage } = useLanguage();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const secretTapHistoryRef = useRef<number[]>([]);
 
   const currentLanguage = languages.find(lang => lang.code === language) || languages[0];
   const btnClass = dark
@@ -47,12 +50,26 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ dark }) => {
     setIsOpen(false);
   };
 
+  const handleToggle = () => {
+    const now = Date.now();
+    secretTapHistoryRef.current = [...secretTapHistoryRef.current.filter((ts) => now - ts < 2800), now];
+
+    if (secretTapHistoryRef.current.length >= 5) {
+      secretTapHistoryRef.current = [];
+      setIsOpen(false);
+      navigate('/admin');
+      return;
+    }
+
+    setIsOpen((value) => !value);
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className={`flex items-center space-x-2 px-3 py-2 rounded-full transition-colors duration-200 ${btnClass}`}
         aria-label="Select language"
       >

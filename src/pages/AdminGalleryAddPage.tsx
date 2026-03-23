@@ -137,7 +137,25 @@ const AdminGalleryAddPage: React.FC = () => {
 
   const onExtraFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
-    setExtraFiles((prev) => [...prev, ...files]);
+    setExtraFiles((prev) => {
+      const keyOf = (f: File) => `${f.name}__${f.size}__${f.lastModified}`;
+      const existing = new Set(prev.map(keyOf));
+      const next = [...prev];
+      let skipped = 0;
+      files.forEach((f) => {
+        const key = keyOf(f);
+        if (existing.has(key)) {
+          skipped += 1;
+          return;
+        }
+        existing.add(key);
+        next.push(f);
+      });
+      if (skipped > 0) {
+        alert(`${skipped} imagine(i) duplicate au fost ignorate.`);
+      }
+      return next;
+    });
     e.target.value = '';
   };
   const removeExtraFile = (i: number) => setExtraFiles((prev) => prev.filter((_, idx) => idx !== i));
@@ -186,12 +204,12 @@ const AdminGalleryAddPage: React.FC = () => {
               {mainFile && <p className="mt-1 text-sm text-neutral-500">{mainFile.name}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Descriere (titlu produs)</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Titlu produs</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-3 border border-neutral-200 rounded-lg" rows={2} placeholder="Ex: Dulap dormitor" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Despre proiect (română)</label>
-              <textarea value={aboutDescriptionRo} onChange={(e) => setAboutDescriptionRo(e.target.value)} className="w-full p-3 border border-neutral-200 rounded-lg" rows={3} placeholder="Text afișat pe site la „Despre proiect”. EN/RU se traduc automat la salvare." />
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Descriere produs (română)</label>
+              <textarea value={aboutDescriptionRo} onChange={(e) => setAboutDescriptionRo(e.target.value)} className="w-full p-3 border border-neutral-200 rounded-lg" rows={3} placeholder="Descriere detaliată a produsului. EN/RU se traduc automat la salvare." />
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">Lucrare / proiect (opțional)</label>

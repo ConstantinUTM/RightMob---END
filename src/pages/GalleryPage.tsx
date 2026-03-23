@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Sparkles } from 'lucide-react';
@@ -13,11 +13,40 @@ import { getLocalizedField, type AppLanguage } from '../lib/localizedContent';
 const SORT_VALUES = ['recent', 'name-asc', 'name-desc', 'category'] as const;
 type SortValue = (typeof SORT_VALUES)[number];
 
+const CARD_SPAN_PATTERN = [
+  'md:row-span-2 lg:row-span-2',
+  'md:col-span-2 lg:col-span-2',
+  'md:row-span-2 lg:row-span-2',
+  '',
+  '',
+  'md:col-span-2 lg:col-span-2',
+  '',
+  '',
+] as const;
+
+const CARD_SPAN_PATTERN_COMPACT = [
+  '',
+  'md:col-span-2 lg:col-span-2',
+  '',
+  'md:col-span-2 lg:col-span-2',
+  '',
+  '',
+] as const;
+
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+};
+
 const GalleryPage: React.FC = () => {
   const { t, language } = useLanguage();
   const [items, setItems] = useState<any[]>([]);
   const [categoryList, setCategoryList] = useState<{ id: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortValue>('recent');
   const [sortOpen, setSortOpen] = useState(false);
   const location = useLocation();
@@ -29,6 +58,7 @@ const GalleryPage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadError(null);
     Promise.all([
       galleryService.getGallery(),
       categoriesService.getCategories().catch(() => []),
@@ -43,7 +73,12 @@ const GalleryPage: React.FC = () => {
         data = data.filter((it: any) => it.visible !== false);
         setItems(data);
       })
-      .catch(() => { if (!cancelled) setItems([]); })
+      .catch(() => {
+        if (!cancelled) {
+          setItems([]);
+          setLoadError('Nu se poate încărca galeria acum. Verifică serverul API și încearcă din nou.');
+        }
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [filterCategory]);
@@ -100,6 +135,45 @@ const GalleryPage: React.FC = () => {
     }
   }, [items, sortBy, categoryLabelsMap, t]);
 
+  const balancedItems = useMemo(() => {
+    if (sortedItems.length <= 2) return sortedItems;
+
+    const buckets = new Map<string, any[]>();
+    sortedItems.forEach((item) => {
+      const key = String(item.category || 'uncategorized').toLowerCase();
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key)!.push(item);
+    });
+
+    const result: any[] = [];
+    let lastKey = '';
+
+    while (result.length < sortedItems.length) {
+      const availableKeys = Array.from(buckets.keys()).filter((key) => (buckets.get(key)?.length || 0) > 0);
+      if (!availableKeys.length) break;
+
+      availableKeys.sort((a, b) => {
+        const aCount = buckets.get(a)?.length || 0;
+        const bCount = buckets.get(b)?.length || 0;
+        const aPenalty = a === lastKey ? 1 : 0;
+        const bPenalty = b === lastKey ? 1 : 0;
+        if (aPenalty !== bPenalty) return aPenalty - bPenalty;
+        return bCount - aCount;
+      });
+
+      const pickedKey = availableKeys[0];
+      const bucket = buckets.get(pickedKey);
+      if (!bucket || !bucket.length) break;
+
+      const nextItem = bucket.shift();
+      if (!nextItem) break;
+      result.push(nextItem);
+      lastKey = pickedKey;
+    }
+
+    return result.length === sortedItems.length ? result : sortedItems;
+  }, [sortedItems]);
+
   const sortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)
     ? t(SORT_OPTIONS.find((o) => o.value === sortBy)!.labelKey)
     : t('gallery.sortBy');
@@ -122,6 +196,7 @@ const GalleryPage: React.FC = () => {
             <img
               src={toUrl(items[0].url)}
               alt=""
+              decoding="async"
               className="w-full h-full object-cover opacity-40"
             />
           )}
@@ -199,8 +274,13 @@ const GalleryPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid galerie – container restrâns (nu full-bleed), cu mărimi neuniforme */}
+      {/* Grid galerie – neuniform (portrait + landscape) fără goluri în layout */}
       <div className="container-custom px-4 sm:px-6 pb-16">
+        {loadError && !loading && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {loadError}
+          </div>
+        )}
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -231,21 +311,19 @@ const GalleryPage: React.FC = () => {
             )}
           </motion.div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 auto-rows-[200px] sm:auto-rows-[240px] md:auto-rows-[280px] lg:auto-rows-[320px] grid-flow-dense">
-            <AnimatePresence mode="popLayout">
-              {sortedItems.map((item, idx) => (
-                <GalleryCard
-                  key={item.id}
-                  item={item}
-                  idx={idx}
-                  total={sortedItems.length}
-                  toUrl={toUrl}
-                  categoryLabel={categoryLabel}
-                  language={language}
-                  t={t}
-                />
-              ))}
-            </AnimatePresence>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 grid-flow-dense auto-rows-[160px] sm:auto-rows-[190px] md:auto-rows-[220px] lg:auto-rows-[240px]">
+            {balancedItems.map((item, idx) => (
+              <GalleryCard
+                key={item.id}
+                item={item}
+                idx={idx}
+                total={balancedItems.length}
+                toUrl={toUrl}
+                categoryLabel={categoryLabel}
+                language={language}
+                t={t}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -258,62 +336,70 @@ type GalleryCardProps = {
   toUrl: (u: string) => string; categoryLabel: (c: string) => string;
   language: string; t: (k: string) => string;
 };
-const GalleryCard = React.forwardRef<HTMLDivElement, GalleryCardProps>(
-  ({ item, idx, total, toUrl, categoryLabel, language, t }, ref) => {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
-  const isBlue = idx % 2 === 0;
-  const setRefs = useCallback((node: HTMLDivElement | null) => {
-    (cardRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-    if (typeof ref === 'function') ref(node);
-    else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
-  }, [ref]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!cardRef.current || !glowRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    glowRef.current.style.opacity = '1';
-    glowRef.current.style.background = `radial-gradient(300px circle at ${x}px ${y}px, ${isBlue ? 'rgba(37,99,235,0.25)' : 'rgba(220,38,38,0.25)'}, transparent 70%)`;
-  }, [isBlue]);
-
-  const handleMouseLeave = useCallback(() => {
-    if (glowRef.current) glowRef.current.style.opacity = '0';
-  }, []);
+const GalleryCard = React.memo(({ item, idx, total, toUrl, categoryLabel, language, t }: GalleryCardProps) => {
 
   const url = toUrl(item.url || '');
-  const cols = 4;
-  const remainder = total % cols || (total ? cols : 0);
-  const noSingleLast = remainder !== 1;
-  const spanRow = noSingleLast && (idx % 3 === 0 || idx % 4 === 2) && idx < total - cols;
-  const spanCol = noSingleLast && idx % 4 === 1 && total > idx + 1;
+  const compactMode = total <= 8;
+  const pattern = compactMode ? CARD_SPAN_PATTERN_COMPACT : CARD_SPAN_PATTERN;
+  const spanClass = pattern[idx % pattern.length];
+
+  let tailFillClass = '';
+  const isLast = idx === total - 1;
+  const lgRest = total % 4;
+  const mdRest = total % 3;
+  const smRest = total % 2;
+
+  if (compactMode && isLast) {
+    if (lgRest === 1) tailFillClass += ' lg:col-span-4';
+    else if (lgRest === 3) tailFillClass += ' lg:col-span-2';
+    if (mdRest === 1) tailFillClass += ' md:col-span-3';
+    else if (mdRest === 2) tailFillClass += ' md:col-span-2';
+    if (smRest === 1) tailFillClass += ' col-span-2';
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+    e.currentTarget.style.setProperty('--my', `${e.clientY - rect.top}px`);
+  };
 
   return (
-    <motion.div
-      ref={setRefs}
-      layout
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.35, delay: Math.min(idx * 0.04, 0.25) }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      className={`rounded-2xl overflow-hidden bg-neutral-900 shadow-lg transition-all duration-500 hover:-translate-y-1.5 hover:shadow-2xl ${spanRow ? 'row-span-2' : ''} ${spanCol && !spanRow ? 'col-span-2' : ''}`}
+    <article
+      className={`h-full rounded-2xl overflow-hidden bg-neutral-900 shadow-md transition-all duration-300 hover:shadow-[0_18px_45px_rgba(220,38,38,0.24)] hover:-translate-y-0.5 ${spanClass} ${tailFillClass}`}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '360px' }}
     >
-      <Link to={item.id ? `/galerie/${item.id}` : '/galerie'} className="block h-full group relative">
-        <div className="relative w-full h-full min-h-[200px] sm:min-h-[240px] md:min-h-[280px]">
+      <Link
+        to={item.id ? `/galerie/${item.id}` : '/galerie'}
+        className="block h-full group relative"
+        onMouseMove={handleMouseMove}
+      >
+        <div className="relative w-full h-full">
           <img
             src={url}
             alt={item.description || item.filename || ''}
-            loading="lazy"
+            loading={idx < 4 ? 'eager' : 'lazy'}
             decoding="async"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            width={1200}
+            height={1500}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            onError={(e) => {
+              const el = e.target as HTMLImageElement;
+              if (el.dataset.fallbackApplied === '1') {
+                el.src = '/images/about/about-2.jpg';
+                return;
+              }
+              el.dataset.fallbackApplied = '1';
+              el.src = '/images/IMG_9859.JPG';
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/5" />
           <div
-            ref={glowRef}
-            className="absolute inset-0 opacity-0 transition-opacity duration-300 pointer-events-none"
+            className="absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 pointer-events-none"
+            style={{
+              background:
+                'radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(37,99,235,0.28), transparent 42%), radial-gradient(190px circle at calc(var(--mx, 50%) + 32px) calc(var(--my, 50%) - 18px), rgba(220,38,38,0.24), transparent 45%)',
+              mixBlendMode: 'screen',
+            }}
           />
 
           {item.category && (
@@ -329,7 +415,7 @@ const GalleryCard = React.forwardRef<HTMLDivElement, GalleryCardProps>(
           </div>
         </div>
       </Link>
-    </motion.div>
+    </article>
   );
 });
 GalleryCard.displayName = 'GalleryCard';

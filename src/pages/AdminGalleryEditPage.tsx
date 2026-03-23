@@ -6,7 +6,7 @@ import { getAdminToken, useAuth } from '../contexts/AuthContext';
 import { getUploadsBase } from '../lib/api';
 import { translateBatch } from '../lib/translationService';
 import { getAllDetailFields, detailsFromMap, detailsToMap, detailsToMapMultilingual, detailsFromMapMultilingual } from '../lib/categoryDetailFields';
-import { Loader2, Star, ImagePlus, Trash2, Languages, MessageSquare } from 'lucide-react';
+import { Loader2, Star, ImagePlus, Trash2, Languages, MessageSquare, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ACCENT = '#374151';
 
@@ -17,6 +17,28 @@ const toBase64 = (f: File) =>
     reader.onerror = rej;
     reader.readAsDataURL(f);
   });
+
+const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15MB
+
+const collectImageEntries = (it: any): Array<{ url: string; filename?: string }> => {
+  const out: Array<{ url: string; filename?: string }> = [];
+  const seen = new Set<string>();
+  if (it?.url) {
+    out.push({ url: it.url, filename: it.filename || '' });
+    seen.add(it.url);
+  }
+  if (Array.isArray(it?.details)) {
+    it.details.forEach((row: any) => {
+      if (!Array.isArray(row?.images)) return;
+      row.images.forEach((img: any) => {
+        if (!img?.url || seen.has(img.url)) return;
+        seen.add(img.url);
+        out.push({ url: img.url, filename: img.filename || '' });
+      });
+    });
+  }
+  return out;
+};
 
 const AdminGalleryEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +61,8 @@ const AdminGalleryEditPage: React.FC = () => {
   const [extraFiles, setExtraFiles] = useState<File[]>([]);
   const [urlsToRemove, setUrlsToRemove] = useState<string[]>([]);
   const [setMainImageUrl, setSetMainImageUrl] = useState<string | null>(null);
+  const [imageOrderUrls, setImageOrderUrls] = useState<string[]>([]);
+  const [zoomIndex, setZoomIndex] = useState<number | null>(null);
   const [translating, setTranslating] = useState(false);
   const didAutoFillTranslations = useRef<string | null>(null);
 
@@ -111,6 +135,24 @@ const AdminGalleryEditPage: React.FC = () => {
               }))
             : [];
           setReviews(revs);
+          const discovered = collectImageEntries(data).map((x) => x.url);
+          if (Array.isArray(data.imageOrderUrls) && data.imageOrderUrls.length > 0) {
+            const fromSaved = data.imageOrderUrls.filter((u: any) => typeof u === 'string').map((u: string) => u.trim()).filter(Boolean);
+            const used = new Set<string>();
+            const ordered: string[] = [];
+            fromSaved.forEach((u: string) => {
+              if (discovered.includes(u) && !used.has(u)) {
+                used.add(u);
+                ordered.push(u);
+              }
+            });
+            discovered.forEach((u) => {
+              if (!used.has(u)) ordered.push(u);
+            });
+            setImageOrderUrls(ordered);
+          } else {
+            setImageOrderUrls(discovered);
+          }
         } else {
           setItem(null);
         }
@@ -123,6 +165,25 @@ const AdminGalleryEditPage: React.FC = () => {
     run();
     return () => { cancelled = true; };
   }, [id]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (zoomIndex == null) return;
+      if (e.key === 'Escape') {
+        setZoomIndex(null);
+        return;
+      }
+      const maxIndex = Math.max(imageOrderUrls.length - 1, 0);
+      if (e.key === 'ArrowRight') {
+        setZoomIndex((prev) => (prev == null ? prev : Math.min(prev + 1, maxIndex)));
+      }
+      if (e.key === 'ArrowLeft') {
+        setZoomIndex((prev) => (prev == null ? prev : Math.max(prev - 1, 0)));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [zoomIndex, imageOrderUrls.length]);
 
   useEffect(() => {
     didAutoFillTranslations.current = null;
@@ -218,6 +279,10 @@ const AdminGalleryEditPage: React.FC = () => {
       }
       if (urlsToRemove.length > 0) payload.removeImageUrls = urlsToRemove;
       if (setMainImageUrl) payload.setMainImageUrl = setMainImageUrl;
+      const allKnownUrls = collectImageEntries(item).map((x) => x.url);
+      const keptKnownUrls = allKnownUrls.filter((url) => !urlsToRemove.includes(url));
+      const normalizedOrder = imageOrderUrls.filter((url) => keptKnownUrls.includes(url));
+      payload.imageOrderUrls = normalizedOrder.length > 0 ? normalizedOrder : keptKnownUrls;
       payload.reviews = reviews.map((r) => ({ id: r.id, text: r.text, author: r.author, date: r.date, visible: r.visible, source: r.source }));
       await galleryService.updateGalleryItem(String(idToUse), payload, token);
       navigate('/galerie/' + idToUse);
@@ -267,8 +332,36 @@ const AdminGalleryEditPage: React.FC = () => {
       }
     }
   }
+  const imageByUrl = new Map(allExistingImages.map((img) => [img.url, img]));
+  const orderedExistingImages: ImageEntry[] = [];
+  imageOrderUrls.forEach((url) => {
+    const found = imageByUrl.get(url);
+    if (found) orderedExistingImages.push(found);
+  });
+  allExistingImages.forEach((img) => {
+    if (!orderedExistingImages.some((it) => it.url === img.url)) orderedExistingImages.push(img);
+  });
+  const zoomImages = orderedExistingImages.map(({ url }) => (url.startsWith('http') ? url : `${base}${url.startsWith('/') ? url : '/' + url}`));
+
+  const handleMoveImage = (url: string, direction: -1 | 1) => {
+    setImageOrderUrls((prev) => {
+      const idx = prev.indexOf(url);
+      if (idx === -1) return prev;
+      const nextIdx = idx + direction;
+      if (nextIdx < 0 || nextIdx >= prev.length) return prev;
+      const clone = [...prev];
+      const tmp = clone[idx];
+      clone[idx] = clone[nextIdx];
+      clone[nextIdx] = tmp;
+      return clone;
+    });
+  };
+
   const handleDeleteImage = (url: string) => {
-    if (window.confirm('Sigur vrei să ștergi această imagine?')) setUrlsToRemove((prev) => (prev.includes(url) ? prev : [...prev, url]));
+    if (!window.confirm('Sigur vrei să ștergi această imagine?')) return;
+    setUrlsToRemove((prev) => (prev.includes(url) ? prev : [...prev, url]));
+    setImageOrderUrls((prev) => prev.filter((x) => x !== url));
+    if (setMainImageUrl === url) setSetMainImageUrl(null);
   };
 
   const handleSaveWithTranslate = async () => {
@@ -333,14 +426,29 @@ const AdminGalleryEditPage: React.FC = () => {
           </label>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">Toate pozele</label>
-            <p className="text-xs text-neutral-500 mb-3">Poți șterge o imagine (cu confirmare) sau o seta ca imagine principală. Salvează pentru a aplica.</p>
+            <p className="text-xs text-neutral-500 mb-3">Click pe imagine pentru preview mare. Poți schimba ordinea cu săgețile, seta principală sau șterge. Salvează pentru a aplica.</p>
             <div className="flex flex-wrap gap-4 mb-4">
-              {allExistingImages.map(({ url, isMain }) => {
+              {orderedExistingImages.map(({ url, isMain }, index) => {
                 const fullUrl = url.startsWith('http') ? url : `${base}${url.startsWith('/') ? url : '/' + url}`;
+                const canMoveLeft = index > 0;
+                const canMoveRight = index < orderedExistingImages.length - 1;
                 return (
                   <div key={url} className="flex flex-col rounded-xl border border-neutral-200 overflow-hidden bg-neutral-50 shadow-sm">
-                    <img src={fullUrl} alt="" className="w-36 h-36 sm:w-40 sm:h-40 object-cover block" />
+                    <button type="button" onClick={() => setZoomIndex(index)} className="w-36 h-36 sm:w-40 sm:h-40 block focus:outline-none focus:ring-2 focus:ring-neutral-400" aria-label="Vezi imaginea mărită">
+                      <img src={fullUrl} alt="" className="w-full h-full object-cover block" />
+                    </button>
                     <div className="flex flex-col gap-2 p-2.5 bg-neutral-100 border-t border-neutral-200">
+                      <div className="flex items-center justify-between gap-2">
+                        <button type="button" onClick={() => handleMoveImage(url, -1)} disabled={!canMoveLeft} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-neutral-300 bg-white disabled:opacity-40 inline-flex items-center gap-1" title="Mută la stânga">
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                          Sus
+                        </button>
+                        <span className="text-[11px] text-neutral-500">#{index + 1}</span>
+                        <button type="button" onClick={() => handleMoveImage(url, 1)} disabled={!canMoveRight} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-neutral-300 bg-white disabled:opacity-40 inline-flex items-center gap-1" title="Mută la dreapta">
+                          Jos
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                       {isMain ? (
                         <span className="text-xs font-medium text-green-700 bg-green-100 px-3 py-2 rounded-lg text-center">Principală</span>
                       ) : (
@@ -357,7 +465,46 @@ const AdminGalleryEditPage: React.FC = () => {
             <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-neutral-200 text-sm font-medium cursor-pointer hover:bg-neutral-50 bg-white">
               <ImagePlus className="w-5 h-5" />
               Adaugă poze
-              <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => setExtraFiles((prev) => [...prev, ...(e.target.files ? Array.from(e.target.files) : [])])} />
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                  const selected = e.target.files ? Array.from(e.target.files) : [];
+                  const valid: File[] = [];
+                  const rejected: string[] = [];
+                  selected.forEach((f) => {
+                    if (f.size > MAX_FILE_BYTES) rejected.push(f.name);
+                    else valid.push(f);
+                  });
+                  if (rejected.length > 0) {
+                    alert(`Aceste fișiere depășesc 15MB și nu au fost adăugate:\n- ${rejected.join('\n- ')}`);
+                  }
+                  if (valid.length > 0) {
+                    setExtraFiles((prev) => {
+                      const keyOf = (f: File) => `${f.name}__${f.size}__${f.lastModified}`;
+                      const existing = new Set(prev.map(keyOf));
+                      const next = [...prev];
+                      let skippedDuplicates = 0;
+                      valid.forEach((f) => {
+                        const key = keyOf(f);
+                        if (existing.has(key)) {
+                          skippedDuplicates += 1;
+                          return;
+                        }
+                        existing.add(key);
+                        next.push(f);
+                      });
+                      if (skippedDuplicates > 0) {
+                        alert(`${skippedDuplicates} imagine(i) duplicate au fost ignorate.`);
+                      }
+                      return next;
+                    });
+                  }
+                  e.currentTarget.value = '';
+                }}
+              />
             </label>
             {extraFiles.length > 0 && (
               <ul className="mt-2 flex flex-wrap gap-2">
@@ -431,6 +578,40 @@ const AdminGalleryEditPage: React.FC = () => {
         <Link to="/admin/gallery" className="px-6 py-2.5 border border-neutral-200 rounded-lg font-medium inline-block">Anulare</Link>
       </div>
       <p className="text-xs text-neutral-500 mt-2">„Traduce și salvează” traduce automat toate câmpurile RO → EN/RU, apoi salvează.</p>
+
+      {zoomIndex != null && zoomImages.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setZoomIndex(null)}>
+          <button type="button" onClick={() => setZoomIndex(null)} className="absolute top-4 right-4 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10" aria-label="Închide preview">
+            <X className="w-6 h-6" />
+          </button>
+          {zoomImages.length > 1 && zoomIndex > 0 && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setZoomIndex((prev) => (prev == null ? prev : Math.max(prev - 1, 0))); }}
+              className="absolute left-3 sm:left-6 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10"
+              aria-label="Imagine anterioară"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+          )}
+          <img
+            src={zoomImages[zoomIndex]}
+            alt="Preview"
+            className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          {zoomImages.length > 1 && zoomIndex < zoomImages.length - 1 && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setZoomIndex((prev) => (prev == null ? prev : Math.min(prev + 1, zoomImages.length - 1))); }}
+              className="absolute right-3 sm:right-6 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10"
+              aria-label="Imagine următoare"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

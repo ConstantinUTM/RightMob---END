@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Trash2, Eye, EyeOff, Filter } from 'lucide-react';
+import { MessageSquare, Trash2, Eye, EyeOff, Filter, Star } from 'lucide-react';
 import { getApiBase } from '../lib/api';
 import { useAuth, getAdminToken } from '../contexts/AuthContext';
 
@@ -8,7 +8,7 @@ interface ReviewItem {
   productId: string;
   productName: string;
   productImage: string;
-  review: { id?: string; text: string; author?: string; date?: string; visible: boolean; source?: string };
+  review: { id?: string; text: string; rating?: number; author?: string; date?: string; visible: boolean; source?: string };
 }
 
 const AdminReviewsPage: React.FC = () => {
@@ -143,6 +143,18 @@ const AdminReviewsPage: React.FC = () => {
                   <p className="font-semibold text-primary-600 mb-1 truncate" title={item.productName}>
                     {item.productName || '(fără nume)'}
                   </p>
+                  <div className="flex items-center gap-1 mb-2" aria-label={`Rating ${Math.max(1, Math.min(5, Number(item.review.rating) || 5))} din 5`}>
+                    {Array.from({ length: 5 }, (_, starIndex) => {
+                      const rating = Math.max(1, Math.min(5, Number(item.review.rating) || 5));
+                      return (
+                        <Star
+                          key={starIndex}
+                          className={`w-4 h-4 ${starIndex < rating ? 'fill-amber-400 text-amber-400' : 'text-neutral-300'}`}
+                        />
+                      );
+                    })}
+                    <span className="ml-2 text-sm font-medium text-dark-500">{Math.max(1, Math.min(5, Number(item.review.rating) || 5))}/5</span>
+                  </div>
                   <p className="text-dark-700 whitespace-pre-wrap mb-2">{item.review.text}</p>
                   <div className="flex flex-wrap gap-3 text-sm text-dark-500">
                     {item.review.author && <span>{item.review.author}</span>}

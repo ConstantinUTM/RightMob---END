@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force portrait videos to stay portrait in fullscreen */
+video:-webkit-full-screen {
+  width: auto !important;
+  height: 100% !important;
+  max-height: 100dvh !important;
+  max-width: 100dvw !important;
+  object-fit: contain !important;
+}
+video:fullscreen {
+  width: auto !important;
+  height: 100% !important;
+  max-height: 100dvh !important;
+  max-width: 100dvw !important;
+  object-fit: contain !important;
+}
+
 @layer base {
   body {
     @apply bg-white text-dark-950 antialiased;

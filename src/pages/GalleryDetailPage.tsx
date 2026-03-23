@@ -148,6 +148,22 @@ const GalleryDetailPage: React.FC = () => {
         }
       });
     }
+    if (Array.isArray(item.imageOrderUrls) && item.imageOrderUrls.length > 0) {
+      const byFull = new Map(list.map((url) => [url, url]));
+      const ordered: string[] = [];
+      const used = new Set<string>();
+      item.imageOrderUrls.forEach((raw: string) => {
+        const full = toFullUrl(raw);
+        if (byFull.has(full) && !used.has(full)) {
+          used.add(full);
+          ordered.push(full);
+        }
+      });
+      list.forEach((full) => {
+        if (!used.has(full)) ordered.push(full);
+      });
+      return ordered.length ? ordered : (item.url ? [toFullUrl(item.url)] : []);
+    }
     return list.length ? list : (item.url ? [toFullUrl(item.url)] : []);
   })();
   const currentImageUrl = allImages[selectedImageIndex] || allImages[0] || '';
@@ -315,7 +331,9 @@ const GalleryDetailPage: React.FC = () => {
                     </ul>
                   )}
                   {reviewSent ? (
-                    <p className="text-green-600 font-medium">{t('productDetail.reviewSent')}</p>
+                    <div className="max-w-2xl rounded-2xl border border-emerald-200 bg-emerald-50/80 px-5 py-4">
+                      <p className="text-emerald-700 font-medium">{t('productDetail.reviewSent')}</p>
+                    </div>
                   ) : (
                     <form
                       onSubmit={async (e) => {
@@ -343,11 +361,11 @@ const GalleryDetailPage: React.FC = () => {
                           setSubmittingReview(false);
                         }
                       }}
-                      className="space-y-4 max-w-2xl"
+                      className="max-w-2xl rounded-3xl border border-neutral-200 bg-gradient-to-br from-white to-neutral-50/70 shadow-[0_20px_50px_rgba(0,0,0,0.06)] p-5 sm:p-7 space-y-6"
                     >
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">{t('productDetail.ratingLabel')}</label>
-                        <div className="flex items-center gap-1">
+                      <div className="pb-4 border-b border-neutral-200/80">
+                        <label className="block text-sm font-semibold text-neutral-800 mb-3">{t('productDetail.ratingLabel')}</label>
+                        <div className="flex items-center gap-1.5">
                           {Array.from({ length: 5 }, (_, i) => {
                             const value = i + 1;
                             const active = value <= commentRating;
@@ -356,49 +374,49 @@ const GalleryDetailPage: React.FC = () => {
                                 key={value}
                                 type="button"
                                 onClick={() => setCommentRating(value)}
-                                className="p-1 rounded hover:bg-amber-50 transition-colors"
+                                className={`p-1.5 rounded-lg transition-all ${active ? 'bg-amber-50' : 'hover:bg-neutral-100'}`}
                                 aria-label={`Alege ${value} stele`}
                               >
                                 <Star className={`w-6 h-6 ${active ? 'text-amber-400 fill-amber-400' : 'text-neutral-300'}`} />
                               </button>
                             );
                           })}
-                          <span className="text-xs text-neutral-500 ml-2">{commentRating}/5</span>
+                          <span className="text-xs font-medium text-neutral-500 ml-2 px-2 py-1 rounded-full bg-neutral-100">{commentRating}/5</span>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-1">{t('productDetail.addComment')}</label>
+                        <label className="block text-sm font-semibold text-neutral-800 mb-2">{t('productDetail.addComment')}</label>
                         <textarea
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
-                          rows={3}
-                          className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          rows={4}
+                          className="w-full px-4 py-3 border border-neutral-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
                           placeholder={t('productDetail.addComment')}
                           required
                         />
                       </div>
-                      <div>
+                      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-center">
                         <input
                           type="text"
                           value={commentAuthor}
                           onChange={(e) => setCommentAuthor(e.target.value)}
-                          className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500"
+                          className="w-full px-4 py-3 border border-neutral-200 rounded-2xl focus:ring-2 focus:ring-primary-500 bg-white"
                           placeholder={t('productDetail.authorPlaceholder')}
                         />
+                        <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-xl border border-neutral-200 bg-white">
+                          <input
+                            type="checkbox"
+                            checked={commentIsOwner}
+                            onChange={(e) => setCommentIsOwner(e.target.checked)}
+                            className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="text-sm text-neutral-700 whitespace-nowrap">{t('productDetail.iAmOwner')}</span>
+                        </label>
                       </div>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={commentIsOwner}
-                          onChange={(e) => setCommentIsOwner(e.target.checked)}
-                          className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <span className="text-neutral-700">{t('productDetail.iAmOwner')}</span>
-                      </label>
                       <button
                         type="submit"
                         disabled={submittingReview || !commentText.trim()}
-                        className="px-5 py-2.5 rounded-xl font-medium bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-semibold bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-colors"
                       >
                         {submittingReview ? '...' : t('productDetail.submitReview')}
                       </button>
