@@ -38,10 +38,16 @@ const app = express();
 const PORT = 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 const BCRYPT_ROUNDS = 12;
+const DEFAULT_ADMIN_PASSWORD = typeof process.env.DEFAULT_ADMIN_PASSWORD === 'string'
+  ? process.env.DEFAULT_ADMIN_PASSWORD.trim()
+  : '';
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const PASSWORD_RESET_PURPOSE = 'admin-password-reset';
 if (!process.env.JWT_SECRET) {
   console.warn('[API] JWT_SECRET nu e setat în .env – folosesc secret temporar (token-urile expiră la repornire).');
+}
+if (!DEFAULT_ADMIN_PASSWORD) {
+  console.warn('[API] DEFAULT_ADMIN_PASSWORD nu e setat. Pentru instalări noi, configurează această variabilă în .env.');
 }
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3001')
   .split(',')
@@ -488,7 +494,7 @@ const writeMessages = async (messages) => {
 // Setări implicite – SECURITY: Force non-empty default password to prevent bypass
 const DEFAULT_ADMIN_SETTINGS = {
   profile: { username: 'Admin', email: 'admin@rightmob.md', profileImage: '' },
-  credentials: { email: 'admin@rightmob.md', password: process.env.DEFAULT_ADMIN_PASSWORD || 'ChangeMe!2026', uid: 'mock-admin-uid', setupRequired: true },
+  credentials: { email: 'admin@rightmob.md', password: DEFAULT_ADMIN_PASSWORD, uid: 'mock-admin-uid', setupRequired: true },
   notificationsEmail: '',
   notificationsPhone: '',
   features: { tryInMyRoomEnabled: true }
