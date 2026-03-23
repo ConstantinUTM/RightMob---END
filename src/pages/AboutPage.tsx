@@ -6,11 +6,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useSiteContent } from '../contexts/SiteContentContext';
 
 const ACCENT = '#374151';
-const RED = '#dc2626';
-const CREAM = '#FAF8F5';
-const CHARCOAL = '#0f0f0f';
-const WARM_GREY = '#5c5c5c';
-
 const AboutPage: React.FC = () => {
   const { t } = useLanguage();
   const { getImageOverride } = useSiteContent();
@@ -25,6 +20,9 @@ const AboutPage: React.FC = () => {
     getImageOverride('about.fallbackImage1', '/images/IMG_9859.JPG'),
     getImageOverride('about.mainImage', '/images/IMG_9872.JPG'),
   ];
+  const aboutVideo = getImageOverride('about.videoFile', '/images/video/about.mp4');
+  const aboutVideoPoster = getImageOverride('about.videoPoster', '/images/about/about-2.jpg');
+  const ctaImage = getImageOverride('about.ctaImage', '/images/about/about-3.jpg');
   const fallbackImages = ['/images/IMG_9859.JPG', '/images/IMG_9872.JPG', '/images/IMG_9859.JPG'];
 
   const steps = [
@@ -41,13 +39,13 @@ const AboutPage: React.FC = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative text-white py-10 sm:py-14 px-4 sm:px-6 overflow-hidden"
+        className="relative text-white pt-24 sm:pt-28 pb-10 sm:pb-14 px-4 sm:px-6 overflow-hidden"
       >
         <img
           src={aboutImages[1]}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
-          fetchpriority="high"
+          fetchPriority="high"
           decoding="async"
           onError={(e) => { (e.target as HTMLImageElement).src = '/images/IMG_9872.JPG'; }}
         />
@@ -164,16 +162,17 @@ const AboutPage: React.FC = () => {
           <div
             className="absolute inset-0 pointer-events-none rounded-2xl"
             style={{
-              background: 'linear-gradient(135deg, rgba(37,99,235,0.25) 0%, rgba(10,10,10,0.5) 50%, rgba(220,38,38,0.2) 100%)',
+              background: 'linear-gradient(135deg, rgba(17,24,39,0.56) 0%, rgba(10,10,10,0.62) 45%, rgba(146,64,14,0.34) 100%)',
             }}
           />
+          <div className="absolute inset-0 pointer-events-none rounded-2xl bg-black/12" />
           {/* Cardurile Livrare & Montaj */}
           <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6 pointer-events-auto">
-            <div className="flex flex-col items-center w-full max-w-2xl">
-              <p className="text-[11px] font-medium text-white uppercase tracking-[0.2em] mb-4 sm:mb-5 text-center">
+            <div className="flex flex-col items-center w-full max-w-4xl">
+              <p className="text-[11px] font-semibold text-white/95 uppercase tracking-[0.24em] mb-4 sm:mb-5 text-center drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
                 • {t('about.deliveryTitle')}
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full justify-items-center sm:justify-items-stretch">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 w-full auto-rows-fr items-stretch">
                 {steps.map(({ key, num }, i) => (
                   <motion.div
                     key={key}
@@ -181,19 +180,32 @@ const AboutPage: React.FC = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.3, delay: i * 0.05 }}
-                    className="flex gap-3 p-4 sm:p-5 rounded-xl bg-white/95 backdrop-blur-md border border-white/20 shadow-xl"
+                    className="group relative flex w-full min-h-[136px] gap-4 p-5 sm:p-6 rounded-2xl h-full overflow-hidden"
+                    style={{
+                      background: i % 2 === 0 ? 'linear-gradient(120deg, rgba(37,99,235,0.18) 0%, rgba(255,255,255,0.16) 48%, rgba(251,146,60,0.15) 100%)' : 'linear-gradient(120deg, rgba(220,38,38,0.2) 0%, rgba(255,255,255,0.15) 48%, rgba(251,191,36,0.14) 100%)',
+                      backdropFilter: 'blur(22px) saturate(170%)',
+                      WebkitBackdropFilter: 'blur(22px) saturate(170%)',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                      boxShadow: '0 18px 44px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.34)',
+                    }}
                   >
                     <div
-                      className="flex shrink-0 w-10 h-10 rounded-lg items-center justify-center"
-                      style={{ background: i % 2 === 0 ? 'linear-gradient(135deg, #2563eb18, #2563eb10)' : 'linear-gradient(135deg, #dc262618, #dc262610)' }}
+                      className="absolute left-0 top-0 h-[3px] w-full opacity-85"
+                      style={{
+                        background: i % 2 === 0 ? 'linear-gradient(90deg, rgba(147,197,253,0.95) 0%, rgba(219,234,254,0.25) 100%)' : 'linear-gradient(90deg, rgba(252,165,165,0.95) 0%, rgba(254,226,226,0.2) 100%)',
+                      }}
+                    />
+                    <div
+                      className="flex shrink-0 w-14 h-14 rounded-2xl items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]"
+                      style={{ background: i % 2 === 0 ? 'rgba(37,99,235,0.38)' : 'rgba(220,38,38,0.38)' }}
                     >
-                      <span className="text-sm font-semibold tabular-nums" style={{ color: i % 2 === 0 ? '#2563eb' : '#dc2626' }}>{num}</span>
+                      <span className="text-lg font-semibold tabular-nums drop-shadow-[0_1px_4px_rgba(0,0,0,0.45)]" style={{ color: i % 2 === 0 ? '#dbeafe' : '#fee2e2' }}>{num}</span>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1">
+                    <div className="min-w-0 flex-1 self-center">
+                      <h3 className="text-[15px] sm:text-base font-semibold text-white uppercase tracking-[0.08em] mb-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)] leading-snug">
                         {t(`about.deliverySteps.${key}.title`)}
                       </h3>
-                      <p className="text-xs text-neutral-600 leading-snug">
+                      <p className="text-sm sm:text-[15px] text-white/90 leading-snug drop-shadow-[0_1px_5px_rgba(0,0,0,0.35)] max-w-[36ch]">
                         {t(`about.deliverySteps.${key}.desc`)}
                       </p>
                     </div>
@@ -259,13 +271,18 @@ const AboutPage: React.FC = () => {
           >
             <video
               className="w-full h-full object-contain"
-              src="/images/video/about.mp4"
+              src={aboutVideo}
               autoPlay
               playsInline
               muted
               loop
               controls
               preload="auto"
+              poster={aboutVideoPoster}
+              onError={(e) => {
+                const el = e.target as HTMLVideoElement;
+                el.poster = '/images/about/about-2.jpg';
+              }}
             />
           </motion.div>
         </div>
@@ -274,7 +291,7 @@ const AboutPage: React.FC = () => {
       {/* CTA */}
       <section className="relative py-10 md:py-14 px-4 sm:px-6 text-white text-center overflow-x-hidden">
         <img
-          src="/images/about/about-3.jpg"
+          src={ctaImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => { (e.target as HTMLImageElement).src = '/images/IMG_9859.JPG'; }}

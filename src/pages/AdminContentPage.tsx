@@ -49,11 +49,16 @@ const TEXT_KEYS: Array<{ page: string; key: string; label: string; multiline?: b
 const IMAGE_KEYS: Array<{ page: string; key: string; label: string; placeholder: string; accept: string }> = [
   { page: 'Home', key: 'home.heroImage', label: 'Imagine fundal hero (pagina principală)', placeholder: '/images/IMG_9859.JPG', accept: 'image/*' },
   { page: 'Home', key: 'home.videoFile', label: 'Fișier video principal', placeholder: '/images/video/home.mp4', accept: 'video/*' },
-  { page: 'Home', key: 'home.videoPoster', label: 'Imagine previzualizare video (înainte de play)', placeholder: '/images/IMG_9859.JPG', accept: 'image/*' },
   { page: 'Despre', key: 'about.heroImage', label: 'Imagine fundal hero (pagina Despre noi)', placeholder: '/images/about/about-2.jpg', accept: 'image/*' },
+  { page: 'Despre', key: 'about.sectionImage1', label: 'Imagine secundară 1 (colaj hero Despre)', placeholder: '/images/about/about-1.jpg', accept: 'image/*' },
+  { page: 'Despre', key: 'about.sectionImage3', label: 'Imagine secundară 2 (colaj hero Despre)', placeholder: '/images/about/about-3.jpg', accept: 'image/*' },
+  { page: 'Despre', key: 'about.fallbackImage1', label: 'Imagine fallback (Despre)', placeholder: '/images/IMG_9859.JPG', accept: 'image/*' },
   { page: 'Despre', key: 'about.mainImage', label: 'Imagine secțiune principală (Despre noi)', placeholder: '/images/IMG_9872.JPG', accept: 'image/*' },
-  { page: 'Contact', key: 'contact.heroImage', label: 'Imagine fundal hero (pagina Contact)', placeholder: '', accept: 'image/*' },
-  { page: 'Contact', key: 'contact.sideImage', label: 'Imagine laterală lângă formular', placeholder: '', accept: 'image/*' },
+  { page: 'Despre', key: 'about.videoFile', label: 'Video secțiune „De ce să ne alegeți”', placeholder: '/images/video/about.mp4', accept: 'video/*' },
+  { page: 'Despre', key: 'about.videoPoster', label: 'Imagine preview video (Despre)', placeholder: '/images/about/about-2.jpg', accept: 'image/*' },
+  { page: 'Despre', key: 'about.ctaImage', label: 'Imagine fundal secțiune CTA (Despre)', placeholder: '/images/about/about-3.jpg', accept: 'image/*' },
+  { page: 'Contact', key: 'contact.heroImage', label: 'Imagine fundal hero (pagina Contact)', placeholder: '/images/about/about-2.jpg', accept: 'image/*' },
+  { page: 'Contact', key: 'contact.sideImage', label: 'Imagine laterală lângă formular', placeholder: '/images/IMG_9859.JPG', accept: 'image/*' },
 ];
 
 const AdminContentPage: React.FC = () => {
@@ -69,6 +74,8 @@ const AdminContentPage: React.FC = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [textSearch, setTextSearch] = useState('');
+  const [customKey, setCustomKey] = useState('');
 
   useEffect(() => {
     if (!loading && !isAdmin) navigate('/');
@@ -105,13 +112,22 @@ const AdminContentPage: React.FC = () => {
 
   useEffect(() => { load(); }, []);
 
-  const groupedText = useMemo(() =>
-    TEXT_KEYS.reduce<Record<string, Array<{ key: string; label: string; multiline?: boolean }>>>((acc, item) => {
+  const groupedText = useMemo(() => {
+    const base = TEXT_KEYS.reduce<Record<string, Array<{ key: string; label: string; multiline?: boolean }>>>((acc, item) => {
       if (!acc[item.page]) acc[item.page] = [];
       acc[item.page].push({ key: item.key, label: item.label, multiline: item.multiline });
       return acc;
-    }, {}),
-  []);
+    }, {});
+
+    const known = new Set(TEXT_KEYS.map((k) => k.key));
+    const customKeys = Object.keys(texts[lang] || {}).filter((k) => !known.has(k));
+    if (customKeys.length) {
+      base['Altele'] = customKeys
+        .sort((a, b) => a.localeCompare(b))
+        .map((key) => ({ key, label: `Text personalizat (${key})`, multiline: true }));
+    }
+    return base;
+  }, [texts, lang]);
 
   const groupedImages = useMemo(() =>
     IMAGE_KEYS.reduce<Record<string, Array<{ key: string; label: string; placeholder: string; accept: string }>>>((acc, item) => {
@@ -162,10 +178,17 @@ const AdminContentPage: React.FC = () => {
       if (!token) throw new Error('Sesiunea de admin a expirat. Reautentifică-te și încearcă din nou.');
       // Salvăm doar valorile care diferă față de textul implicit ('' = șterge override)
       const saveBatch: Record<string, string> = {};
-      for (const { key } of TEXT_KEYS) {
+      const known = new Set(TEXT_KEYS.map((k) => k.key));
+      const keysToCheck = new Set<string>([...TEXT_KEYS.map((k) => k.key), ...Object.keys(texts[lang] || {})]);
+
+      for (const key of keysToCheck) {
         const val = texts[lang]?.[key] ?? '';
         const staticVal = getStaticTranslation(lang, key);
-        if (val !== staticVal) saveBatch[key] = val;
+        if (known.has(key)) {
+          if (val !== staticVal) saveBatch[key] = val;
+        } else if (val.trim()) {
+          saveBatch[key] = val;
+        }
       }
       const res = await fetch(`${getApiBase()}/api/admin/site-content`, {
         method: 'PUT',
@@ -185,6 +208,18 @@ const AdminContentPage: React.FC = () => {
   };
 
   if (loading) return null;
+
+  const addCustomTextKey = () => {
+    const key = customKey.trim();
+    if (!key) return;
+    setTexts((prev) => ({
+      ...prev,
+      ro: { ...(prev.ro || {}), [key]: prev.ro?.[key] ?? '' },
+      en: { ...(prev.en || {}), [key]: prev.en?.[key] ?? '' },
+      ru: { ...(prev.ru || {}), [key]: prev.ru?.[key] ?? '' },
+    }));
+    setCustomKey('');
+  };
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -219,15 +254,40 @@ const AdminContentPage: React.FC = () => {
         </button>
 
         {activeTab === 'text' && (
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value as Language)}
-            className="ml-auto px-3 py-2 rounded-lg border border-gray-200"
-          >
-            <option value="ro">Română</option>
-            <option value="en">English</option>
-            <option value="ru">Русский</option>
-          </select>
+          <>
+            <input
+              type="text"
+              value={textSearch}
+              onChange={(e) => setTextSearch(e.target.value)}
+              placeholder="Caută orice secvență de text (cheie, label sau conținut)..."
+              className="w-full md:w-96 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-neutral-300"
+            />
+            <div className="flex items-center gap-2 w-full md:w-auto md:ml-auto">
+              <input
+                type="text"
+                value={customKey}
+                onChange={(e) => setCustomKey(e.target.value)}
+                placeholder="Adaugă cheie text (ex: contact.emailCards.title)"
+                className="w-full md:w-80 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-neutral-300"
+              />
+              <button
+                type="button"
+                onClick={addCustomTextKey}
+                className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              >
+                Adaugă
+              </button>
+            </div>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value as Language)}
+              className="px-3 py-2 rounded-lg border border-gray-200"
+            >
+              <option value="ro">Română</option>
+              <option value="en">English</option>
+              <option value="ru">Русский</option>
+            </select>
+          </>
         )}
       </div>
 
@@ -235,11 +295,26 @@ const AdminContentPage: React.FC = () => {
         <div className="py-8 text-gray-500">Se încarcă...</div>
       ) : (
         <div className="space-y-6">
-          {activeTab === 'text' && Object.entries(groupedText).map(([page, rows]) => (
+          {activeTab === 'text' && Object.entries(groupedText).map(([page, rows]) => {
+            const search = textSearch.trim().toLowerCase();
+            const filteredRows = !search
+              ? rows
+              : rows.filter((row) => {
+                  const value = texts[lang]?.[row.key] ?? '';
+                  return (
+                    row.key.toLowerCase().includes(search)
+                    || row.label.toLowerCase().includes(search)
+                    || value.toLowerCase().includes(search)
+                  );
+                });
+
+            if (!filteredRows.length) return null;
+
+            return (
             <section key={page} className="bg-white rounded-2xl border border-gray-100 p-5">
               <h2 className="font-semibold text-gray-900 mb-4">{page}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {rows.map((row) => (
+                {filteredRows.map((row) => (
                   <label key={row.key} className="block">
                     <span className="text-sm font-medium text-gray-700">{row.label}</span>
                     <span className="text-xs text-gray-400 block mb-1">{row.key}</span>
@@ -270,7 +345,8 @@ const AdminContentPage: React.FC = () => {
                 ))}
               </div>
             </section>
-          ))}
+            );
+          })}
 
           {activeTab === 'images' && Object.entries(groupedImages).map(([page, rows]) => (
             <section key={page} className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -285,25 +361,40 @@ const AdminContentPage: React.FC = () => {
                       <span className="text-xs text-gray-400">{row.key}</span>
 
                       {/* Previzualizare */}
-                      {currentUrl ? (
-                        isVideo ? (
-                          <video
-                            src={currentUrl}
-                            className="w-full max-w-[240px] h-32 object-cover rounded-lg border border-gray-200"
-                            muted
-                          />
-                        ) : (
-                          <img
-                            src={currentUrl}
-                            alt=""
-                            className="w-full max-w-[240px] h-32 object-cover rounded-lg border border-gray-200"
-                          />
-                        )
-                      ) : (
-                        <div className="w-full max-w-[240px] h-32 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center text-xs text-gray-400 bg-gray-50">
-                          {row.placeholder ? 'implicit (din cod)' : 'fără fișier'}
-                        </div>
-                      )}
+                      {(() => {
+                        const previewUrl = currentUrl || row.placeholder;
+                        const previewIsVideo = row.accept.startsWith('video') || /\.(mp4|webm|mov|ogg)$/i.test(previewUrl);
+                        if (previewUrl) {
+                          return previewIsVideo ? (
+                            <div className="relative w-full max-w-[240px]">
+                              <video
+                                src={previewUrl}
+                                className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                                muted
+                              />
+                              {!currentUrl && (
+                                <span className="absolute bottom-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded">implicit</span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="relative w-full max-w-[240px]">
+                              <img
+                                src={previewUrl}
+                                alt=""
+                                className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                              />
+                              {!currentUrl && (
+                                <span className="absolute bottom-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded">implicit</span>
+                              )}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="w-full max-w-[240px] h-32 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center text-xs text-gray-400 bg-gray-50">
+                            fără fișier
+                          </div>
+                        );
+                      })()}
 
                       {currentUrl && (
                         <p className="text-xs text-gray-500 truncate max-w-[240px]" title={currentUrl}>{currentUrl}</p>
