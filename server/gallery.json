@@ -92,8 +92,8 @@
   },
   {
     "id": "1772135756566zwzmgs",
-    "filename": "1772135756550-2026-02-16_20.21.59.jpg",
-    "url": "/uploads/living/living-mobila/1772135756550-2026-02-16_20.21.59.jpg",
+    "filename": "1773781280806-2026-02-16_20.22.14.jpg",
+    "url": "/uploads/living/living-mobila/1773781280806-2026-02-16_20.22.14.jpg",
     "category": "living",
     "description": "Living mobila",
     "aboutDescription": "",
@@ -107,23 +107,23 @@
         "text": "Lemn",
         "text_en": "Wood",
         "text_ru": "Дерево",
-        "images": []
+        "images": [
+          {
+            "url": "/uploads/living/living-mobila/1773781280837-IMG_9856.JPG",
+            "filename": "1773781280837-IMG_9856.JPG"
+          },
+          {
+            "url": "/uploads/living/living-mobila/1773781280850-IMG_9874.JPG",
+            "filename": "1773781280850-IMG_9874.JPG"
+          }
+        ]
       },
       {
         "title": "",
         "text": "",
         "text_en": "",
         "text_ru": "",
-        "images": [
-          {
-            "url": "/uploads/living/living-mobila/1772135756552-2026-02-16_20.21.44.jpg",
-            "filename": "1772135756552-2026-02-16_20.21.44.jpg"
-          },
-          {
-            "url": "/uploads/living/living-mobila/1772135756553-2026-02-16_20.22.14.jpg",
-            "filename": "1772135756553-2026-02-16_20.22.14.jpg"
-          }
-        ]
+        "images": []
       }
     ],
     "createdAt": "2026-02-26T19:55:56.566Z",
@@ -299,16 +299,7 @@
         "text": "",
         "text_en": "",
         "text_ru": "",
-        "images": [
-          {
-            "url": "/uploads/living/liing-2026/1771536299119-Logo2.jpg",
-            "filename": "1771536299119-Logo2.jpg"
-          },
-          {
-            "url": "/uploads/living/liing-2026/1771536299117-Logo1.jpg",
-            "filename": "1771536299117-Logo1.jpg"
-          }
-        ]
+        "images": []
       }
     ],
     "createdAt": "2026-02-19T21:24:59.132Z",
