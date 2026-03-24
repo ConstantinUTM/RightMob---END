@@ -235,6 +235,15 @@ const GalleryDetailPage: React.FC = () => {
                 alt={item.description || ''}
                 className="max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-lg pointer-events-none select-none"
                 draggable={false}
+                onError={(e) => {
+                  const el = e.target as HTMLImageElement;
+                  if (el.dataset.fallbackApplied === '1') {
+                    el.src = '/images/about/about-2.jpg';
+                    return;
+                  }
+                  el.dataset.fallbackApplied = '1';
+                  el.src = '/images/IMG_9859.JPG';
+                }}
               />
             </div>
 
@@ -253,7 +262,20 @@ const GalleryDetailPage: React.FC = () => {
                           : 'border-transparent opacity-80 hover:opacity-100'
                       }`}
                     >
-                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={src}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const el = e.target as HTMLImageElement;
+                          if (el.dataset.fallbackApplied === '1') {
+                            el.src = '/images/about/about-2.jpg';
+                            return;
+                          }
+                          el.dataset.fallbackApplied = '1';
+                          el.src = '/images/IMG_9859.JPG';
+                        }}
+                      />
                     </button>
                   ))}
                 </div>

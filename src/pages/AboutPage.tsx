@@ -277,7 +277,7 @@ const AboutPage: React.FC = () => {
               muted
               loop
               controls
-              preload="auto"
+              preload="metadata"
               poster={aboutVideoPoster}
               onError={(e) => {
                 const el = e.target as HTMLVideoElement;

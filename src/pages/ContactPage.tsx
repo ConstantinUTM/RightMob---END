@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, MapPin, Phone, Mail, Clock, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSiteContent } from '../contexts/SiteContentContext';
+import { getApiBase } from '../lib/api';
 
 const ACCENT = '#374151';
 const RED = '#dc2626';
@@ -148,8 +149,7 @@ const ContactPage: React.FC = () => {
     setIsSubmitting(true);
     setSubmitStatus('idle');
     try {
-      const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3001/api/messages`, {
+      const res = await fetch(`${getApiBase()}/api/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, timestamp: new Date().toISOString() }),

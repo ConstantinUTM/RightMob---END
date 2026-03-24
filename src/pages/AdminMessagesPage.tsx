@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Mail, Phone, User, Calendar, CheckCircle2, Monitor, MapPin, Globe, MousePointerClick } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth, getAdminToken } from '../contexts/AuthContext';
+import { getApiBase } from '../lib/api';
 
 interface MessageMetadata {
   device?: string;
@@ -44,11 +45,10 @@ const AdminMessagesPage: React.FC = () => {
 
   const loadMessages = async () => {
     try {
-      const hostname = window.location.hostname;
-      const token = getAdminToken();
+      const token = getAdminToken() || '';
       console.log('📩 Loading messages with token:', token?.substring(0, 20) + '***');
       
-      const response = await fetch(`http://${hostname}:3001/api/admin/messages`, {
+      const response = await fetch(`${getApiBase()}/api/admin/messages`, {
         headers: { 'x-admin-token': token }
       });
       if (!response.ok) {
@@ -69,9 +69,8 @@ const AdminMessagesPage: React.FC = () => {
 
   const markAsRead = async (id: string) => {
     try {
-      const hostname = window.location.hostname;
-      const token = getAdminToken();
-      const response = await fetch(`http://${hostname}:3001/api/admin/messages/${id}/read`, {
+      const token = getAdminToken() || '';
+      const response = await fetch(`${getApiBase()}/api/admin/messages/${id}/read`, {
         method: 'PUT',
         headers: { 'x-admin-token': token }
       });
@@ -93,10 +92,10 @@ const AdminMessagesPage: React.FC = () => {
     if (!confirm('Sigur vrei să ștergi acest mesaj?')) return;
 
     try {
-      const hostname = window.location.hostname;
-      const response = await fetch(`http://${hostname}:3001/api/admin/messages/${id}`, {
+      const token = getAdminToken() || '';
+      const response = await fetch(`${getApiBase()}/api/admin/messages/${id}`, {
         method: 'DELETE',
-        headers: { 'x-admin-token': getAdminToken() }
+        headers: { 'x-admin-token': token }
       });
       if (!response.ok) throw new Error('Failed to delete message');
       

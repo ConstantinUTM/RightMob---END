@@ -23,6 +23,22 @@ const defaultContent: SiteContent = {
 
 const SiteContentContext = createContext<SiteContentContextType | undefined>(undefined);
 
+const normalizeMediaUrl = (value: string): string => {
+  const raw = value.trim();
+  if (!raw) return raw;
+  if (raw.startsWith('/')) return raw;
+  try {
+    const parsed = new URL(raw);
+    // Accept older values saved from local/dev by converting them to same-origin relative paths.
+    if (parsed.pathname.startsWith('/uploads/') || parsed.pathname.startsWith('/images/')) {
+      return parsed.pathname;
+    }
+    return raw;
+  } catch {
+    return raw;
+  }
+};
+
 export const SiteContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [content, setContent] = useState<SiteContent>(defaultContent);
   const [loading, setLoading] = useState(true);
@@ -63,7 +79,7 @@ export const SiteContentProvider: React.FC<{ children: ReactNode }> = ({ childre
     },
     getImageOverride: (key: string, fallback = '') => {
       const v = content.images?.[key];
-      if (typeof v === 'string' && v.trim()) return v;
+      if (typeof v === 'string' && v.trim()) return normalizeMediaUrl(v);
       return fallback;
     },
   }), [content, loading]);

@@ -1,9 +1,9 @@
 import { Product } from '../data/products';
+import { getApiBase } from '../lib/api';
 
 // Proxy product APIs to gallery so legacy calls continue to work
 const getGalleryApiUrl = () => {
-  const hostname = window.location.hostname;
-  return `http://${hostname}:3001/api/gallery`;
+  return `${getApiBase()}/api/gallery`;
 };
 
 const GALLERY_API = getGalleryApiUrl();

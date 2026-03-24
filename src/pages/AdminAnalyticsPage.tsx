@@ -7,8 +7,9 @@ import {
 } from 'lucide-react';
 import { getAdminToken } from '../contexts/AuthContext';
 import galleryService from '../services/galleryService';
+import { getApiBase } from '../lib/api';
 
-const API_URL = `http://${window.location.hostname}:3001`;
+const API_URL = getApiBase();
 
 /* ─── Types ─── */
 interface ViewEntry {

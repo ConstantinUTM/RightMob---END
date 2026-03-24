@@ -233,7 +233,7 @@ const VideoSection: React.FC = () => {
                   controls
                   playsInline
                   loop
-                  preload="auto"
+                  preload="metadata"
                   poster={videoPoster}
                 />
               </div>
