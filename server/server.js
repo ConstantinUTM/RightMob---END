@@ -49,10 +49,16 @@ if (!process.env.JWT_SECRET) {
 if (!DEFAULT_ADMIN_PASSWORD) {
   console.warn('[API] DEFAULT_ADMIN_PASSWORD nu e setat. Pentru instalări noi, configurează această variabilă în .env.');
 }
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3001')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3001',
+  'https://rightmob.md',
+  'https://www.rightmob.md'
+];
+const ALLOWED_ORIGINS = Array.from(new Set([
+  ...(process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean),
+  ...DEFAULT_ALLOWED_ORIGINS
+]));
 const tokenBlacklist = new Set();
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 15MB
 const SAFE_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
@@ -263,7 +269,11 @@ app.get('/favicon.png', (req, res) => {
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') {
     return res.status(413).json({
-      error: 'Payload prea mare. Redu numărul de poze încărcate simultan sau dimensiunea lor (max 15MB/fișier).'
+      error: 'Payload prea mare (max aproximativ 80MB/request JSON). Redu numărul de poze încărcate simultan.',
+      limits: {
+        payloadPerRequest: '80MB',
+        imagePerFile: '15MB'
+      }
     });
   }
   return next(err);
@@ -1284,7 +1294,11 @@ app.post('/api/gallery/upload', galleryUploadRateLimiter, async (req, res) => {
         base64Data = payload.substring(commaIndex + 1);
       }
       const buffer = Buffer.from(base64Data, 'base64');
-      if (buffer.length > MAX_UPLOAD_BYTES) throw new Error('Fișier prea mare (max 15MB)');
+      if (buffer.length > MAX_UPLOAD_BYTES) {
+        const e = new Error('Fișier prea mare (max 15MB/fișier)');
+        e.code = 'FILE_TOO_LARGE';
+        throw e;
+      }
       if (!isValidImageBuffer(buffer)) throw new Error('Format imagine invalid');
       const safeBase = sanitizeImageFilename(fname);
       const safeName = Date.now() + '-' + (safeBase || 'image').replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -1364,6 +1378,9 @@ app.post('/api/gallery/upload', galleryUploadRateLimiter, async (req, res) => {
     res.status(201).json(newItem);
   } catch (error) {
     console.error('Eroare la upload galerie:', error);
+    if (error?.code === 'FILE_TOO_LARGE') {
+      return res.status(413).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Eroare la upload' });
   }
 });
