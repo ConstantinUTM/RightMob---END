@@ -230,6 +230,7 @@ app.use(helmet({
       "connect-src": ["'self'", "https:", "wss:"],
       "font-src": ["'self'", "https:", "data:"],
       "media-src": ["'self'", "blob:", "https:"],
+      "frame-src": ["'self'", "https://www.google.com", "https://maps.google.com", "https://www.openstreetmap.org"],
       "frame-ancestors": ["'self'"],
     }
   } : false,

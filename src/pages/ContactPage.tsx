@@ -18,18 +18,24 @@ const SUPPORT_EMAILS = [
     label: 'Informații generale',
     email: 'info@rightmob.md',
     note: 'Întrebări despre produse, showroom și colaborări.',
+    responseTime: 'Răspuns în 1-2 ore',
+    bestFor: 'Consultanță inițială',
   },
   {
     type: 'offer' as const,
     label: 'Oferte personalizate',
     email: 'oferta@rightmob.md',
     note: 'Solicitări de preț pentru mobilier la comandă.',
+    responseTime: 'Răspuns în aceeași zi',
+    bestFor: 'Proiecte la comandă',
   },
   {
     type: 'orders' as const,
     label: 'Comenzi',
     email: 'comenzi@rightmob.md',
     note: 'Status comandă, livrare și instalare.',
+    responseTime: 'Prioritate livrare',
+    bestFor: 'Comenzi active',
   },
 ];
 
@@ -78,12 +84,14 @@ const ContactPage: React.FC = () => {
   const schedule = import.meta.env.VITE_COMPANY_SCHEDULE || 'Lu - Sâm: 09:00 - 18:00';
   const mapsPlaceId = import.meta.env.VITE_GOOGLE_MAPS_PLACE_ID || '';
   const addressForMap = import.meta.env.VITE_GOOGLE_MAPS_QUERY || 'RIGHT MOB, Strada Ismail 33, MD-2001, Chișinău, Moldova';
+  const mapsEmbedOverride = import.meta.env.VITE_GOOGLE_MAPS_EMBED_URL || '';
   const mapsSearchUrl = mapsPlaceId
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressForMap)}&query_place_id=${encodeURIComponent(mapsPlaceId)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressForMap)}`;
-  const mapsEmbedUrl = mapsPlaceId
-    ? `https://www.google.com/maps?q=place_id:${encodeURIComponent(mapsPlaceId)}&z=16&output=embed`
-    : `https://www.google.com/maps?q=${encodeURIComponent(addressForMap)}&z=16&output=embed`;
+  const mapsEmbedUrl = mapsEmbedOverride
+    || (mapsPlaceId
+      ? `https://maps.google.com/maps?output=embed&q=place_id:${encodeURIComponent(mapsPlaceId)}`
+      : `https://maps.google.com/maps?output=embed&q=${encodeURIComponent(addressForMap)}`);
   const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '373XXXXXXXX';
   const viberNumber = import.meta.env.VITE_VIBER_NUMBER || '373XXXXXXXX';
   const instagramUrl = import.meta.env.VITE_INSTAGRAM_URL || 'https://instagram.com/rightmob';
@@ -365,51 +373,76 @@ const ContactPage: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.15 }}
             className="mb-16"
           >
-            <div className="relative rounded-3xl p-6 md:p-8 border overflow-hidden" style={{ borderColor: 'rgba(26,26,26,0.08)', background: 'linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)' }}>
-              <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(220,38,38,0.10)' }} />
-              <div className="absolute -bottom-20 -right-16 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(37,99,235,0.10)' }} />
+            <div className="relative rounded-3xl p-6 md:p-9 border overflow-hidden" style={{ borderColor: 'rgba(26,26,26,0.08)', background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #f8fafc 100%)' }}>
+              <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(220,38,38,0.12)' }} />
+              <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(37,99,235,0.12)' }} />
+              <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(17,24,39,0.05) 1px, transparent 1px)', backgroundSize: '22px 22px', opacity: 0.35 }} />
 
               <div className="relative z-10">
-              <div className="mb-6">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-500 mb-2">
-                  Emailuri dedicate
-                </p>
-                <h3 className="text-2xl md:text-[32px] font-serif font-bold" style={{ color: CHARCOAL }}>
-                  Alege adresa corectă pentru răspuns rapid
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                {SUPPORT_EMAILS.map((item, idx) => {
-                  const accent = LOGO_COLOR_ORDER[idx % LOGO_COLOR_ORDER.length];
-                  return (
-                    <motion.a
-                      key={item.email}
-                      href={buildGmailCardUrl(item.type, item.email)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.25, delay: 0.08 + idx * 0.05 }}
-                      className="group relative rounded-2xl p-5 border bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden"
-                      style={{ borderColor: `${accent}26`, boxShadow: '0 10px 24px rgba(15,23,42,0.08)' }}
-                    >
-                      <div className="absolute left-0 top-0 h-full w-1" style={{ background: accent }} />
-                      <div className="inline-flex items-center justify-center rounded-xl w-11 h-11 mb-3" style={{ background: `${accent}18`, color: accent }}>
-                        {iconByType[item.type]}
-                      </div>
-                      <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-neutral-500 mb-1">
-                        {item.label}
-                      </p>
-                      <p className="text-sm font-semibold break-all transition-colors" style={{ color: accent }}>
-                        {item.email}
-                      </p>
-                      <p className="text-xs text-neutral-500 leading-relaxed mt-2">
-                        {item.note}
-                      </p>
-                    </motion.a>
-                  );
-                })}
-              </div>
+                <div className="mb-7 md:mb-8">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-500 mb-2">
+                    Emailuri dedicate
+                  </p>
+                  <h3 className="text-2xl md:text-[36px] font-serif font-bold leading-tight" style={{ color: CHARCOAL }}>
+                    Alege adresa corectă pentru răspuns rapid
+                  </h3>
+                  <p className="text-sm md:text-base text-neutral-600 mt-3 max-w-2xl">
+                    Fiecare adresă merge spre o echipă diferită, astfel cererea ta ajunge direct la persoana potrivită.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {SUPPORT_EMAILS.map((item, idx) => {
+                    const accent = LOGO_COLOR_ORDER[idx % LOGO_COLOR_ORDER.length];
+                    return (
+                      <motion.a
+                        key={item.email}
+                        href={buildGmailCardUrl(item.type, item.email)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.08 + idx * 0.06 }}
+                        className="group relative rounded-2xl p-5 border bg-white/95 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl overflow-hidden"
+                        style={{ borderColor: `${accent}2e`, boxShadow: '0 14px 30px rgba(15,23,42,0.08)' }}
+                      >
+                        <div className="absolute left-0 top-0 h-full w-1.5" style={{ background: `linear-gradient(180deg, ${accent} 0%, ${accent}99 100%)` }} />
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ background: `radial-gradient(220px circle at 80% 20%, ${accent}18 0%, transparent 55%)` }} />
+
+                        <div className="relative z-10">
+                          <div className="inline-flex items-center justify-center rounded-xl w-12 h-12 mb-3" style={{ background: `${accent}18`, color: accent }}>
+                            {iconByType[item.type]}
+                          </div>
+
+                          <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-neutral-500 mb-1">
+                            {item.label}
+                          </p>
+                          <p className="text-lg font-semibold break-all transition-colors" style={{ color: accent }}>
+                            {item.email}
+                          </p>
+
+                          <div className="flex flex-wrap gap-2 mt-3 mb-2">
+                            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium" style={{ background: `${accent}14`, color: accent }}>
+                              {item.responseTime}
+                            </span>
+                            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium text-neutral-600 bg-neutral-100">
+                              {item.bestFor}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-neutral-500 leading-relaxed mt-2">
+                            {item.note}
+                          </p>
+
+                          <div className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
+                            Deschide Gmail
+                            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                          </div>
+                        </div>
+                      </motion.a>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </motion.section>
