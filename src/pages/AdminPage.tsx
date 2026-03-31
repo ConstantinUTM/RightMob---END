@@ -15,8 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { Product } from '../data/products';
 import { 
   getAllProducts, 
-  deleteProduct,
-  deleteProductImage 
+  deleteProduct
 } from '../services/productService';
 
 const AdminPage: React.FC = () => {

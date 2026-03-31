@@ -354,7 +354,6 @@ const AdminContentPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {rows.map((row) => {
                   const currentUrl = images[row.key] || '';
-                  const isVideo = row.accept.startsWith('video') || /\.(mp4|webm|mov|ogg)$/i.test(currentUrl);
                   return (
                     <div key={row.key} className="flex flex-col gap-2">
                       <span className="text-sm font-medium text-gray-700">{row.label}</span>

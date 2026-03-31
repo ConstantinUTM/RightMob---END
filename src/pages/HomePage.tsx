@@ -10,7 +10,6 @@ import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { useSiteContent } from '../contexts/SiteContentContext';
 import { getUploadsBase } from '../lib/api';
 import { CATEGORY_IMAGES, CATEGORY_IMAGE_FALLBACKS } from '../config/categoryImages';
-import heroImageFallback from '../../images/IMG_9859.JPG';
 
 const HomePage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -70,9 +69,9 @@ const HeroSection: React.FC = () => {
           className={`w-full h-full object-cover transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="eager"
           decoding="async"
-          fetchpriority="high"
+          fetchPriority="high"
           onLoad={() => setImageLoaded(true)}
-          onError={() => setHeroSrc(heroImageFallback)}
+          onError={() => setHeroSrc(HERO_IMAGE_PUBLIC)}
         />
         <div className="gradient-overlay" />
       </motion.div>
