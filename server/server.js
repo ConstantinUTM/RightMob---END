@@ -38,18 +38,56 @@ const app = express();
 const PORT = 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 const BCRYPT_ROUNDS = 12;
-const DEFAULT_ADMIN_PASSWORD = typeof process.env.DEFAULT_ADMIN_PASSWORD === 'string'
-  ? process.env.DEFAULT_ADMIN_PASSWORD.trim()
+const DEFAULT_ADMIN_PASSWORD_HASH = typeof process.env.DEFAULT_ADMIN_PASSWORD_HASH === 'string'
+  ? process.env.DEFAULT_ADMIN_PASSWORD_HASH.trim()
   : '';
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+const RUNTIME_SECRETS_FILE = path.join(__dirname, '.runtime-secrets.json');
+
+const readRuntimeSecrets = () => {
+  try {
+    if (!fs.existsSync(RUNTIME_SECRETS_FILE)) return {};
+    const raw = fs.readFileSync(RUNTIME_SECRETS_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+};
+
+const writeRuntimeSecrets = (payload) => {
+  try {
+    fs.writeFileSync(RUNTIME_SECRETS_FILE, JSON.stringify(payload, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[API] Nu am putut salva secretul runtime:', e?.message || e);
+  }
+};
+
+const resolveJwtSecret = () => {
+  const envSecret = typeof process.env.JWT_SECRET === 'string' ? process.env.JWT_SECRET.trim() : '';
+  if (envSecret.length >= 32) return envSecret;
+
+  const runtimeSecrets = readRuntimeSecrets();
+  const persisted = typeof runtimeSecrets.jwtSecret === 'string' ? runtimeSecrets.jwtSecret.trim() : '';
+  if (persisted.length >= 32) return persisted;
+
+  const generated = crypto.randomBytes(32).toString('hex');
+  writeRuntimeSecrets({ ...runtimeSecrets, jwtSecret: generated });
+  return generated;
+};
+
+const JWT_SECRET = resolveJwtSecret();
+const JWT_ISSUER = process.env.JWT_ISSUER || 'rightmob-api';
+const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'rightmob-admin';
+const ADMIN_TOKEN_TTL = process.env.ADMIN_TOKEN_TTL || '12h';
 const PASSWORD_RESET_PURPOSE = 'admin-password-reset';
 if (!process.env.JWT_SECRET) {
-  console.warn('[API] JWT_SECRET nu e setat în .env – folosesc secret temporar (token-urile expiră la repornire).');
+  console.warn('[API] JWT_SECRET nu e setat în .env. Folosesc secret persistent local din server/.runtime-secrets.json.');
 }
-if (!DEFAULT_ADMIN_PASSWORD) {
-  console.warn('[API] DEFAULT_ADMIN_PASSWORD nu e setat. Pentru instalări noi, configurează această variabilă în .env.');
+if (process.env.DEFAULT_ADMIN_PASSWORD) {
+  console.warn('[API] DEFAULT_ADMIN_PASSWORD este depreciat. Folosește doar parole hash-uite în admin settings sau DEFAULT_ADMIN_PASSWORD_HASH.');
 }
 const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:1573',
   'http://localhost:5173',
   'http://localhost:3001',
   'https://rightmob.md',
@@ -59,8 +97,25 @@ const ALLOWED_ORIGINS = Array.from(new Set([
   ...(process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean),
   ...DEFAULT_ALLOWED_ORIGINS
 ]));
+const ALLOWED_ORIGIN_PATTERNS = (process.env.ALLOWED_ORIGIN_PATTERNS || '')
+  .split(',')
+  .map((p) => p.trim())
+  .filter(Boolean)
+  .map((pattern) => {
+    try {
+      return new RegExp(pattern);
+    } catch (_) {
+      return null;
+    }
+  })
+  .filter(Boolean);
 const tokenBlacklist = new Set();
+const JSON_BODY_LIMIT_MB = Number.parseInt(process.env.JSON_BODY_LIMIT_MB || '25', 10);
+const JSON_BODY_LIMIT = `${Number.isFinite(JSON_BODY_LIMIT_MB) && JSON_BODY_LIMIT_MB > 0 ? JSON_BODY_LIMIT_MB : 25}mb`;
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 15MB
+const SITE_CONTENT_UPLOAD_MAX_MB = Number.parseInt(process.env.SITE_CONTENT_UPLOAD_MAX_MB || '60', 10);
+const SITE_CONTENT_UPLOAD_MAX_BYTES = (Number.isFinite(SITE_CONTENT_UPLOAD_MAX_MB) && SITE_CONTENT_UPLOAD_MAX_MB > 0 ? SITE_CONTENT_UPLOAD_MAX_MB : 30) * 1024 * 1024;
+const MAX_PRIMARY_PER_CATEGORY = 6;
 const SAFE_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 const MAGIC = {
   jpeg: Buffer.from([0xff, 0xd8, 0xff]),
@@ -102,8 +157,16 @@ const secureLog = (event, req, extra = {}) => {
   console.log('[SEC]', event, getClientIp(req), extra?.email || extra?.message || '');
 };
 
+let contactSmtpWarningShown = false;
+const warnContactSmtpMissingOnce = () => {
+  if (contactSmtpWarningShown) return;
+  console.warn('[Contact] Notificare email dezactivată: SMTP nu e configurat complet. Setează SMTP_USER și SMTP_PASS (sau SMTP_APP_PASSWORD) în .env.');
+  contactSmtpWarningShown = true;
+};
+
 const createMailTransport = () => {
-  if (!(process.env.SMTP_USER && process.env.SMTP_PASS)) {
+  const smtpPass = process.env.SMTP_PASS || process.env.SMTP_APP_PASSWORD || '';
+  if (!(process.env.SMTP_USER && smtpPass)) {
     return null;
   }
 
@@ -113,7 +176,7 @@ const createMailTransport = () => {
     secure: process.env.SMTP_SECURE === 'true',
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS || ''
+      pass: smtpPass
     }
   });
 };
@@ -122,6 +185,13 @@ const getPasswordResetRecipient = (settings) => {
   const notificationsEmail = typeof settings?.notificationsEmail === 'string' ? settings.notificationsEmail.trim() : '';
   const adminEmail = typeof settings?.credentials?.email === 'string' ? settings.credentials.email.trim() : '';
   return notificationsEmail || adminEmail;
+};
+
+const getContactNotificationRecipient = (settings) => {
+  const envPreferred = String(process.env.CONTACT_NOTIFICATIONS_EMAIL || process.env.NOTIFICATIONS_EMAIL || '').trim();
+  const settingsEmail = typeof settings?.notificationsEmail === 'string' ? settings.notificationsEmail.trim() : '';
+  const envCompany = String(process.env.VITE_COMPANY_EMAIL || '').trim();
+  return envPreferred || settingsEmail || envCompany || 'info@rightmob.md';
 };
 
 // Bază de date: PostgreSQL (DATABASE_URL) sau SQLite – API async
@@ -169,15 +239,34 @@ const validatePasswordComplexity = (password) => {
   return true;
 };
 
-const isValidAdminToken = (token) => {
-  if (!token || typeof token !== 'string') return false;
-  if (tokenBlacklist.has(token)) return false;
-  try {
-    jwt.verify(token, JWT_SECRET);
-    return true;
-  } catch (_) {
-    return false;
+const createAdminToken = ({ sub, email }) => jwt.sign(
+  { sub: sub || 'admin', email: email || '' },
+  JWT_SECRET,
+  {
+    expiresIn: ADMIN_TOKEN_TTL,
+    issuer: JWT_ISSUER,
+    audience: JWT_AUDIENCE,
+    jwtid: typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : crypto.randomBytes(16).toString('hex'),
   }
+);
+
+const verifyAdminToken = (token) => {
+  if (!token || typeof token !== 'string') return null;
+  if (tokenBlacklist.has(token)) return null;
+  try {
+    return jwt.verify(token, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    });
+  } catch (_) {
+    return null;
+  }
+};
+
+const isValidAdminToken = (token) => {
+  return !!verifyAdminToken(token);
 };
 
 // Curățare blacklist la fiecare oră (token-uri expirate)
@@ -193,10 +282,10 @@ setInterval(() => {
 // Admin auth + CSRF guard
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
-  // SECURITY FIX: Strict origin validation - parse as URL to prevent startsWith bypass
   try {
     const url = new URL(origin);
-    return ALLOWED_ORIGINS.includes(url.origin);
+    if (ALLOWED_ORIGINS.includes(url.origin)) return true;
+    return ALLOWED_ORIGIN_PATTERNS.some((rx) => rx.test(url.origin));
   } catch (_) {
     return false; // Invalid URL format
   }
@@ -239,17 +328,13 @@ app.use(helmet({
 }));
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-    try {
-      const url = new URL(origin);
-      if (ALLOWED_ORIGINS.includes(url.origin)) return cb(null, true);
-    } catch (_) {}
+    if (isAllowedOrigin(origin)) return cb(null, true);
     cb(null, false);
   },
   credentials: true
 }));
 app.use(compression());
-app.use(express.json({ limit: '80mb' }));
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads'), {
   etag: true,
   lastModified: true,
@@ -270,9 +355,9 @@ app.get('/favicon.png', (req, res) => {
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') {
     return res.status(413).json({
-      error: 'Payload prea mare (max aproximativ 80MB/request JSON). Redu numărul de poze încărcate simultan.',
+      error: `Payload prea mare (max aproximativ ${JSON_BODY_LIMIT.toUpperCase()}/request JSON). Redu numărul de poze încărcate simultan.`,
       limits: {
-        payloadPerRequest: '80MB',
+        payloadPerRequest: JSON_BODY_LIMIT.toUpperCase(),
         imagePerFile: '15MB'
       }
     });
@@ -368,6 +453,19 @@ const chunkText = (text) => {
   }
   return chunks;
 };
+
+const sanitizeTranslatedText = (sourceText, translatedText) => {
+  const source = String(sourceText || '').trim();
+  const translated = String(translatedText || '').trim();
+  if (!translated) return source;
+
+  // Uneori serviciul extern poate întoarce texte corupte foarte scurte (ex: "M" pentru "Moldova").
+  if (source.length >= 3 && translated.length <= 1) return source;
+  if (source.length >= 6 && translated.length <= Math.max(1, Math.floor(source.length * 0.2))) return source;
+
+  return translated;
+};
+
 const translateWithMyMemory = async (text, fromLang, toLang) => {
   const chunks = chunkText(text);
   if (chunks.length === 0) return '';
@@ -379,7 +477,7 @@ const translateWithMyMemory = async (text, fromLang, toLang) => {
       const res = await fetch(url);
       const data = await res.json();
       const translated = data?.responseData?.translatedText;
-      results.push(translated && typeof translated === 'string' ? translated : chunk);
+      results.push(sanitizeTranslatedText(chunk, translated && typeof translated === 'string' ? translated : chunk));
     } catch (e) {
       results.push(chunk);
     }
@@ -505,10 +603,36 @@ const writeMessages = async (messages) => {
 // Setări implicite – SECURITY: Force non-empty default password to prevent bypass
 const DEFAULT_ADMIN_SETTINGS = {
   profile: { username: 'Admin', email: 'admin@rightmob.md', profileImage: '' },
-  credentials: { email: 'admin@rightmob.md', password: DEFAULT_ADMIN_PASSWORD, uid: 'mock-admin-uid', setupRequired: true },
+  credentials: { email: 'admin@rightmob.md', password: DEFAULT_ADMIN_PASSWORD_HASH, uid: 'mock-admin-uid', setupRequired: true },
   notificationsEmail: '',
   notificationsPhone: '',
   features: { tryInMyRoomEnabled: true }
+};
+
+const migrateAdminPasswordToHash = async () => {
+  try {
+    const settings = await readAdminSettings();
+    if (!settings || !settings.credentials) return;
+    const storedPass = getStoredAdminPassword(settings.credentials);
+    if (!storedPass) return;
+
+    if (isPasswordHash(storedPass)) {
+      if (settings.credentials.password !== storedPass || settings.credentials.passwordHash) {
+        settings.credentials.password = storedPass;
+        delete settings.credentials.passwordHash;
+        await writeAdminSettings(settings);
+      }
+      return;
+    }
+
+    const hashed = await bcrypt.hash(storedPass, BCRYPT_ROUNDS);
+    settings.credentials.password = hashed;
+    delete settings.credentials.passwordHash;
+    await writeAdminSettings(settings);
+    console.log('[SEC] Parola admin a fost migrată automat la bcrypt hash.');
+  } catch (e) {
+    console.warn('[SEC] Migrarea parolei admin la hash a eșuat:', e?.message || e);
+  }
 };
 
 // Setări admin (DB sau JSON)
@@ -793,7 +917,7 @@ app.get('/api/test', (req, res) => {
 app.post('/api/messages', async (req, res) => {
   console.log('📧 POST /api/messages called!', req.body);
   try {
-    const { fullName, email, phone, message, timestamp } = req.body;
+    const { fullName, email, phone, message, timestamp, departmentEmail } = req.body;
     
     if (!fullName || !email || !message) {
       return res.status(400).json({ error: 'Numele, emailul și mesajul sunt obligatorii' });
@@ -805,6 +929,7 @@ app.post('/api/messages', async (req, res) => {
       fullName,
       email,
       phone: phone != null ? String(phone).trim() : '',
+      departmentEmail: departmentEmail != null ? String(departmentEmail).trim() : '',
       message,
       timestamp: timestamp || new Date().toISOString(),
       read: false,
@@ -813,23 +938,12 @@ app.post('/api/messages', async (req, res) => {
     messages.push(newMessage);
     if (await writeMessages(messages)) {
       const settings = await readAdminSettings();
-      const toEmail = (settings?.notificationsEmail || process.env.NOTIFICATIONS_EMAIL || '').trim();
+      const toEmail = getContactNotificationRecipient(settings);
       if (toEmail && toEmail.includes('@')) {
-        const hasSmtp = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
-        if (!hasSmtp) {
-          console.warn('[Contact] Notificare email: SMTP nu e configurat. Setează SMTP_USER și SMTP_PASS în .env pentru a trimite mesajele pe email.');
-        }
+        const transporter = createMailTransport();
+        if (!transporter) warnContactSmtpMissingOnce();
         try {
-          const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMTP_PORT || '587', 10),
-            secure: process.env.SMTP_SECURE === 'true',
-            auth: process.env.SMTP_USER ? {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS || ''
-            } : undefined
-          });
-          if (transporter && process.env.SMTP_USER && process.env.SMTP_PASS) {
+          if (transporter) {
             // SECURITY: HTML escaping to prevent email header injection and XSS
             const htmlEscapeMap = {
               '&': '&amp;',
@@ -842,6 +956,8 @@ app.post('/api/messages', async (req, res) => {
             
             const phoneLine = newMessage.phone ? `\nTelefon: ${newMessage.phone}` : '';
             const phoneHtml = newMessage.phone ? `<p><strong>Telefon:</strong> ${escapeHtml(newMessage.phone)}</p>` : '';
+            const departmentLine = newMessage.departmentEmail ? `\nDepartament selectat: ${newMessage.departmentEmail}` : '';
+            const departmentHtml = newMessage.departmentEmail ? `<p><strong>Departament selectat:</strong> ${escapeHtml(newMessage.departmentEmail)}</p>` : '';
             const notifPhone = (settings?.notificationsPhone || '').trim();
             const notifPhoneLine = notifPhone ? `\n\nContact notificări (opțional): ${notifPhone}` : '';
             const notifPhoneHtml = notifPhone ? `<p><em>Dacă dorești, poți contacta și la: ${escapeHtml(notifPhone)}</em></p>` : '';
@@ -849,8 +965,8 @@ app.post('/api/messages', async (req, res) => {
               from: process.env.SMTP_FROM || process.env.SMTP_USER,
               to: toEmail,
               subject: `[Contact] Mesaj de la ${escapeHtml(fullName)}`,
-              text: `Nume: ${fullName}\nEmail: ${email}${phoneLine}\n\nMesaj:\n${message}${notifPhoneLine}`,
-              html: `<p><strong>Nume:</strong> ${escapeHtml(fullName)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p>${phoneHtml}<p><strong>Mesaj:</strong></p><p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>${notifPhoneHtml}`
+              text: `Nume: ${fullName}\nEmail: ${email}${phoneLine}${departmentLine}\n\nMesaj:\n${message}${notifPhoneLine}`,
+              html: `<p><strong>Nume:</strong> ${escapeHtml(fullName)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p>${phoneHtml}${departmentHtml}<p><strong>Mesaj:</strong></p><p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>${notifPhoneHtml}`
             });
           }
         } catch (mailErr) {
@@ -1095,6 +1211,75 @@ app.get('/api/reviews/recent', async (req, res) => {
   });
   list.sort((a, b) => (b.review.date || '').localeCompare(a.review.date || ''));
   res.json(list.slice(0, limit));
+});
+
+// GET - Dynamic Sitemap XML (SEO) – include ruete statice + gallery items dinamic
+app.get('/api/sitemap.xml', async (req, res) => {
+  try {
+    const gallery = await readGallery();
+    const categories = await readCategories();
+    const baseUrl = process.env.BASE_URL || 'https://rightmob.md';
+    const now = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format pentru sitemap
+    const escapeXml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+    // Rute statice cu prioritate mare
+    const staticRoutes = [
+      { path: '/', priority: '1.0', changefreq: 'daily' },
+      { path: '/galerie', priority: '0.9', changefreq: 'weekly' },
+      { path: '/despre', priority: '0.8', changefreq: 'monthly' },
+      { path: '/contact', priority: '0.8', changefreq: 'monthly' },
+      { path: '/try-room', priority: '0.7', changefreq: 'monthly' }
+    ];
+
+    staticRoutes.forEach((route) => {
+      xml += `  <url>\n`;
+      xml += `    <loc>${escapeXml(baseUrl)}${escapeXml(route.path)}</loc>\n`;
+      xml += `    <lastmod>${now}</lastmod>\n`;
+      xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
+      xml += `    <priority>${route.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    // Landing pages de categorie (SEO)
+    categories.forEach((category) => {
+      const id = typeof category?.id === 'string' ? category.id.trim().toLowerCase() : '';
+      if (!id) return;
+      xml += `  <url>\n`;
+      xml += `    <loc>${escapeXml(baseUrl)}/mobilier/${encodeURIComponent(id)}</loc>\n`;
+      xml += `    <lastmod>${now}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.8</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    // Galerie items dinamic – fiecare proiect devine /galerie/:id
+    gallery.forEach((item) => {
+      if (item.visible === false) return; // Skip hidden items
+      const itemDate = item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : now;
+      xml += `  <url>\n`;
+      xml += `    <loc>${escapeXml(baseUrl)}/galerie/${encodeURIComponent(String(item.id))}</loc>\n`;
+      xml += `    <lastmod>${itemDate}</lastmod>\n`;
+      xml += `    <changefreq>monthly</changefreq>\n`;
+      xml += `    <priority>0.7</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    xml += '</urlset>';
+
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.send(xml);
+  } catch (error) {
+    console.error('Eroare GET /api/sitemap.xml:', error?.message || error);
+    res.status(500).json({ error: 'Eroare la generare sitemap' });
+  }
 });
 
 // GET - Toate recenziile (admin) – pentru filtrare, afișare/ascundere, ștergere
@@ -1367,11 +1552,17 @@ app.post('/api/gallery/upload', galleryUploadRateLimiter, async (req, res) => {
     };
 
     const gallery = await readGallery();
-    // If this new item is marked primary, unset isPrimary for existing items in same category
     if (newItem.isPrimary) {
-      gallery.forEach(g => {
-        if (g.category === newItem.category) g.isPrimary = false;
-      });
+      const categoryId = String(newItem.category || '').trim();
+      const primaryCountInCategory = gallery.reduce((count, g) => {
+        const sameCategory = String(g.category || '').trim() === categoryId;
+        return count + (sameCategory && !!g.isPrimary ? 1 : 0);
+      }, 0);
+      if (primaryCountInCategory >= MAX_PRIMARY_PER_CATEGORY) {
+        return res.status(400).json({
+          error: `Categoria are deja ${MAX_PRIMARY_PER_CATEGORY} elemente prioritare. Elimină prioritatea de pe un element înainte să adaugi altul.`,
+        });
+      }
     }
     gallery.unshift(newItem);
     await writeGallery(gallery);
@@ -1462,9 +1653,19 @@ app.put('/api/gallery/:id', async (req, res) => {
     }
     if (isPrimary !== undefined) {
       item.isPrimary = !!isPrimary;
-      if (item.isPrimary) {
-        gallery.forEach((g, i) => {
-          if (i !== index && g.category === item.category) g.isPrimary = false;
+    }
+
+    if (item.isPrimary) {
+      const categoryId = String(item.category || '').trim();
+      const primaryCountInCategory = gallery.reduce((count, g, i) => {
+        if (i === index) return count;
+        const sameCategory = String(g.category || '').trim() === categoryId;
+        return count + (sameCategory && !!g.isPrimary ? 1 : 0);
+      }, 0);
+
+      if (primaryCountInCategory >= MAX_PRIMARY_PER_CATEGORY) {
+        return res.status(400).json({
+          error: `Categoria are deja ${MAX_PRIMARY_PER_CATEGORY} elemente prioritare. Elimină prioritatea de pe un element înainte să adaugi altul.`,
         });
       }
     }
@@ -1859,19 +2060,40 @@ app.post('/api/admin/login', async (req, res) => {
     return res.status(401).json({ error: 'Credențiale invalide' });
   }
 
-  const token = jwt.sign(
-    { sub: (creds && creds.uid) || 'admin', email: (creds && creds.email) || '' },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
+  const token = createAdminToken({
+    sub: (creds && creds.uid) || 'admin',
+    email: (creds && creds.email) || '',
+  });
   secureLog('login_ok', req, { email: (creds && creds.email) || inputStr });
   return res.json({
     token,
+    tokenTtl: ADMIN_TOKEN_TTL,
     user: {
       email: (creds && creds.email) ? String(creds.email) : '',
       displayName: (profile && profile.username) ? String(profile.username) : 'Admin'
     }
   });
+});
+
+// POST - Refresh token admin (rotation + blacklist token vechi)
+app.post('/api/admin/refresh-token', (req, res) => {
+  const oldToken = req.headers['x-admin-token'];
+  const origin = req.headers.origin || req.headers.referer;
+  if (!isAllowedOrigin(origin)) {
+    return res.status(403).json({ error: 'CSRF check failed' });
+  }
+  const payload = verifyAdminToken(oldToken);
+  if (!payload) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const token = createAdminToken({
+    sub: payload.sub || 'admin',
+    email: payload.email || '',
+  });
+  if (oldToken && typeof oldToken === 'string') tokenBlacklist.add(oldToken);
+  secureLog('token_refreshed', req, { email: payload.email || '' });
+  return res.json({ token, tokenTtl: ADMIN_TOKEN_TTL });
 });
 
 // POST - Logout admin (adaugă token-ul în blacklist)
@@ -2108,7 +2330,9 @@ app.put('/api/admin/site-content', (req, res) => {
     try {
       const base64Data = typeof data === 'string' && data.includes(',') ? data.split(',')[1] : data;
       const buffer = Buffer.from(base64Data, 'base64');
-      if (buffer.length > 30 * 1024 * 1024) return res.status(400).json({ error: 'Fișier prea mare (max 30MB)' });
+      if (buffer.length > SITE_CONTENT_UPLOAD_MAX_BYTES) {
+        return res.status(400).json({ error: `Fișier prea mare (max ${Math.round(SITE_CONTENT_UPLOAD_MAX_BYTES / (1024 * 1024))}MB)` });
+      }
       const siteDir = path.join(UPLOADS_DIR, 'site-content');
       if (!fs.existsSync(siteDir)) fs.mkdirSync(siteDir, { recursive: true });
       const rawBase = path.basename(String(filename)).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 128);
@@ -2129,16 +2353,213 @@ app.put('/api/admin/site-content', (req, res) => {
     }
   });
 
-  // POST - Înregistrează o vizionare (path + ip, opțional geo)
+const ANALYTICS_SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+const ANALYTICS_DEDUPE_WINDOW_MS = 15 * 1000;
+
+const SEARCH_HOST_HINTS = ['google.', 'bing.', 'yahoo.', 'duckduckgo.', 'yandex.', 'baidu.'];
+const SOCIAL_HOST_HINTS = ['facebook.', 'instagram.', 'tiktok.', 'linkedin.', 'twitter.', 'x.com', 'pinterest.', 'youtube.'];
+const MESSAGING_HOST_HINTS = ['whatsapp.', 'web.whatsapp.', 'telegram.', 't.me', 'viber.', 'messenger.'];
+
+const isLocalOrPrivateIp = (ip) => {
+  if (!ip || typeof ip !== 'string') return false;
+  const normalized = ip.replace(/^::ffff:/, '').trim();
+  if (!normalized) return false;
+  if (normalized === '::1' || normalized === '127.0.0.1') return true;
+  if (normalized.startsWith('10.') || normalized.startsWith('192.168.')) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(normalized)) return true;
+  if (normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:')) return true;
+  return false;
+};
+
+const normalizeReferrer = (referrer) => {
+  if (!referrer || typeof referrer !== 'string') return '';
+  const trimmed = referrer.trim();
+  if (!trimmed) return '';
+  try {
+    const u = new URL(trimmed);
+    return `${u.origin}${u.pathname}`.slice(0, 512);
+  } catch {
+    return '';
+  }
+};
+
+const getReferrerHost = (referrer) => {
+  if (!referrer || typeof referrer !== 'string') return '';
+  try {
+    return new URL(referrer).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+};
+
+const normalizeQueryForChannel = (query) => {
+  if (!query || typeof query !== 'string') return '';
+  return query.trim().replace(/^\?/, '').slice(0, 512);
+};
+
+const hasAnyQueryParam = (query, keys) => {
+  if (!query) return false;
+  try {
+    const params = new URLSearchParams(query);
+    return keys.some((k) => params.has(k));
+  } catch {
+    return false;
+  }
+};
+
+const detectTrafficChannel = (referrer, query) => {
+  const normalizedQuery = normalizeQueryForChannel(query);
+  if (hasAnyQueryParam(normalizedQuery, ['gclid', 'msclkid'])) return 'Paid Search';
+  if (hasAnyQueryParam(normalizedQuery, ['fbclid', 'ttclid', 'twclid', 'li_fat_id'])) return 'Paid Social';
+
+  const host = getReferrerHost(referrer);
+  if (!host) return 'Direct';
+  if (SEARCH_HOST_HINTS.some((hint) => host.includes(hint))) return 'Organic Search';
+  if (SOCIAL_HOST_HINTS.some((hint) => host.includes(hint))) return 'Social';
+  if (MESSAGING_HOST_HINTS.some((hint) => host.includes(hint))) return 'Messaging';
+  return 'Referral';
+};
+
+const buildVisitorKey = (view) => {
+  if (view && view.visitorId) return `v:${view.visitorId}`;
+  if (view && view.ip) return `ip:${view.ip}`;
+  return null;
+};
+
+const buildSessionMetrics = (views) => {
+  const grouped = new Map();
+  views.forEach((v) => {
+    const visitorKey = buildVisitorKey(v);
+    if (!visitorKey) return;
+    const tsMs = v.ts ? Date.parse(v.ts) : Number.NaN;
+    if (Number.isNaN(tsMs)) return;
+    const row = {
+      tsMs,
+      path: v.path || '/',
+      channel: v.channel || detectTrafficChannel(v.referrer || '', v.query || ''),
+    };
+    if (!grouped.has(visitorKey)) grouped.set(visitorKey, []);
+    grouped.get(visitorKey).push(row);
+  });
+
+  const sessions = [];
+  grouped.forEach((arr) => {
+    arr.sort((a, b) => a.tsMs - b.tsMs);
+    let current = null;
+    arr.forEach((ev) => {
+      if (!current) {
+        current = {
+          start: ev.tsMs,
+          end: ev.tsMs,
+          views: 1,
+          firstPath: ev.path,
+          firstChannel: ev.channel,
+        };
+        return;
+      }
+      if (ev.tsMs - current.end > ANALYTICS_SESSION_TIMEOUT_MS) {
+        sessions.push(current);
+        current = {
+          start: ev.tsMs,
+          end: ev.tsMs,
+          views: 1,
+          firstPath: ev.path,
+          firstChannel: ev.channel,
+        };
+      } else {
+        current.end = ev.tsMs;
+        current.views += 1;
+      }
+    });
+    if (current) sessions.push(current);
+  });
+
+  const total = sessions.length;
+  if (total === 0) {
+    return {
+      total: 0,
+      bounceRate: 0,
+      avgDurationSec: 0,
+      avgPages: 0,
+      byChannel: {},
+      topEntryPages: [],
+    };
+  }
+
+  let bounceCount = 0;
+  let durationTotal = 0;
+  let pageTotal = 0;
+  const byChannel = {};
+  const entryPages = {};
+  sessions.forEach((s) => {
+    if (s.views <= 1) bounceCount += 1;
+    durationTotal += Math.max(0, s.end - s.start);
+    pageTotal += s.views;
+    const channelKey = s.firstChannel || 'Unknown';
+    byChannel[channelKey] = (byChannel[channelKey] || 0) + 1;
+    const entry = s.firstPath || '/';
+    entryPages[entry] = (entryPages[entry] || 0) + 1;
+  });
+
+  const topEntryPages = Object.entries(entryPages)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([path, count]) => ({ path, count }));
+
+  return {
+    total,
+    bounceRate: Math.round((bounceCount / total) * 100),
+    avgDurationSec: Math.round(durationTotal / total / 1000),
+    avgPages: Number((pageTotal / total).toFixed(2)),
+    byChannel,
+    topEntryPages,
+  };
+};
+
+// POST - Înregistrează o vizionare (path + ip, opțional geo)
 app.post('/api/analytics/view', async (req, res) => {
   try {
     const path = req.body?.path || req.path || '/';
     const ip = getClientIp(req);
+    const rawVisitorId = typeof req.body?.visitorId === 'string' ? req.body.visitorId.trim() : '';
+    const visitorId = /^[a-zA-Z0-9_-]{8,64}$/.test(rawVisitorId) ? rawVisitorId : null;
+    const referrer = normalizeReferrer(typeof req.body?.referrer === 'string' ? req.body.referrer : '');
+    const query = normalizeQueryForChannel(typeof req.body?.query === 'string' ? req.body.query : '');
     const ua = String(req.headers['user-agent'] || '').toLowerCase();
     const device = /ipad|tablet/.test(ua) ? 'Tablet' : /android|iphone|mobile/.test(ua) ? 'Mobile' : 'Desktop';
-    const view = { path: path === '' ? '/' : path, ts: new Date().toISOString(), ip: ip || null, device };
+    const channel = detectTrafficChannel(referrer, query);
+    const view = {
+      path: path === '' ? '/' : path,
+      ts: new Date().toISOString(),
+      ip: ip || null,
+      device,
+      visitorId,
+      referrer,
+      referrerHost: getReferrerHost(referrer) || null,
+      query,
+      channel,
+    };
+
     const data = await readAnalytics();
     data.views = data.views || [];
+
+    const visitorKey = buildVisitorKey(view);
+    if (visitorKey) {
+      const nowMs = Date.parse(view.ts);
+      let scanned = 0;
+      for (let i = data.views.length - 1; i >= 0 && scanned < 400; i -= 1, scanned += 1) {
+        const prev = data.views[i];
+        const prevKey = buildVisitorKey(prev);
+        if (prevKey !== visitorKey) continue;
+        const prevTsMs = prev && prev.ts ? Date.parse(prev.ts) : Number.NaN;
+        if (Number.isNaN(prevTsMs)) break;
+        if (nowMs - prevTsMs > ANALYTICS_DEDUPE_WINDOW_MS) break;
+        if ((prev.path || '/') === view.path) {
+          return res.status(204).end();
+        }
+      }
+    }
+
     data.views.push(view);
     // Păstrăm maxim 10000 vizionări
     if (data.views.length > 10000) {
@@ -2148,7 +2569,7 @@ app.post('/api/analytics/view', async (req, res) => {
     res.status(204).end();
     // Opțional: rezolvă geo în background (doar pentru IP-uri reale, nu localhost)
     const IP_REGEX = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
-    if (ip && ip !== '::1' && ip !== '127.0.0.1' && !ip.startsWith('192.168.') && !ip.startsWith('10.') && IP_REGEX.test(ip)) {
+    if (ip && !isLocalOrPrivateIp(ip) && IP_REGEX.test(ip.replace(/^::ffff:/, ''))) {
       fetch(`http://ip-api.com/json/${ip}?fields=country,city`, { signal: AbortSignal.timeout(2000) })
         .then((r) => r.json())
         .then(async (geo) => {
@@ -2179,19 +2600,41 @@ app.get('/api/analytics/summary', async (req, res) => {
   try {
     const data = await readAnalytics();
     const views = data.views || [];
+    const nowMs = Date.now();
+    const last7dTs = nowMs - 7 * 24 * 60 * 60 * 1000;
+    const last30dTs = nowMs - 30 * 24 * 60 * 60 * 1000;
+    const last90dTs = nowMs - 90 * 24 * 60 * 60 * 1000;
     const totalViews = views.length;
     const byPath = {};
+    const byPathUniqueSets = {};
     const byDay = {};
     const byHour = {};
     const byCountry = {};
     const byCity = {};
     const byRegion = {};
     const byDevice = {};
+    const byChannel = {};
     const byPathPerDay = {}; // { "2026-02-18": { "/": 3, "/galerie": 2 } }
+    const uniqueVisitors = new Set();
+    const uniqueVisitorsLast7d = new Set();
+    const uniqueVisitorsLast30d = new Set();
+    const uniqueVisitorsLast90d = new Set();
 
     views.forEach((v) => {
       const p = v.path || '/';
       byPath[p] = (byPath[p] || 0) + 1;
+      const visitorKey = v.visitorId || (v.ip ? `ip:${v.ip}` : null);
+      if (visitorKey) {
+        uniqueVisitors.add(visitorKey);
+        if (!byPathUniqueSets[p]) byPathUniqueSets[p] = new Set();
+        byPathUniqueSets[p].add(visitorKey);
+        const tsMs = v.ts ? Date.parse(v.ts) : Number.NaN;
+        if (!Number.isNaN(tsMs)) {
+          if (tsMs >= last7dTs) uniqueVisitorsLast7d.add(visitorKey);
+          if (tsMs >= last30dTs) uniqueVisitorsLast30d.add(visitorKey);
+          if (tsMs >= last90dTs) uniqueVisitorsLast90d.add(visitorKey);
+        }
+      }
       try {
         let day = null;
         if (v.ts) {
@@ -2212,7 +2655,17 @@ app.get('/api/analytics/summary', async (req, res) => {
       byRegion[regionKey] = (byRegion[regionKey] || 0) + 1;
       const deviceKey = v.device || 'Unknown';
       byDevice[deviceKey] = (byDevice[deviceKey] || 0) + 1;
+      const channelKey = v.channel || detectTrafficChannel(v.referrer || '', v.query || '');
+      byChannel[channelKey] = (byChannel[channelKey] || 0) + 1;
     });
+    const byPathUnique = Object.fromEntries(
+      Object.entries(byPathUniqueSets).map(([pathKey, set]) => [pathKey, set.size])
+    );
+    const topPagesByUnique = Object.entries(byPathUnique)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([pathKey, count]) => ({ path: pathKey, count }));
+    const sessions = buildSessionMetrics(views);
     const sortedPaths = Object.entries(byPath).sort((a, b) => b[1] - a[1]);
     const mostViewed = sortedPaths[0] ? { path: sortedPaths[0][0], count: sortedPaths[0][1] } : null;
     const recent = views.slice(-500).reverse().map((v) => ({
@@ -2221,9 +2674,35 @@ app.get('/api/analytics/summary', async (req, res) => {
       country: v.country || null,
       city: v.city || null,
       device: v.device || 'Unknown',
+      channel: v.channel || detectTrafficChannel(v.referrer || '', v.query || ''),
+      referrerHost: v.referrerHost || getReferrerHost(v.referrer || '') || null,
       ip: v.ip ? v.ip.replace(/(\d+)$/, '.***') : null
     }));
-    res.json({ totalViews, byPath, byDay, byHour, byCountry, byCity, byRegion, byDevice, byPathPerDay, mostViewed, recent });
+    res.json({
+      totalViews,
+      uniqueVisitors: uniqueVisitors.size,
+      uniqueVisitorsByPeriod: {
+        all: uniqueVisitors.size,
+        last7d: uniqueVisitorsLast7d.size,
+        last30d: uniqueVisitorsLast30d.size,
+        last90d: uniqueVisitorsLast90d.size,
+      },
+      uniqueVisitorsLast30d: uniqueVisitorsLast30d.size,
+      byPath,
+      byPathUnique,
+      topPagesByUnique,
+      byDay,
+      byHour,
+      byCountry,
+      byCity,
+      byRegion,
+      byDevice,
+      byChannel,
+      byPathPerDay,
+      sessions,
+      mostViewed,
+      recent,
+    });
   } catch (error) {
     console.error('Eroare la citirea analytics:', error);
     res.status(500).json({ error: 'Eroare server' });
@@ -2258,13 +2737,41 @@ app.get('/api/analytics/export', async (req, res) => {
       filtered = views.filter((v) => v.ts && v.ts >= fromStr);
     }
 
+    const uniqueVisitorsForExport = new Set();
+    const byPathUniqueSets = {};
+    filtered.forEach((v) => {
+      const visitorKey = buildVisitorKey(v);
+      if (!visitorKey) return;
+      uniqueVisitorsForExport.add(visitorKey);
+      const p = v.path || '/';
+      if (!byPathUniqueSets[p]) byPathUniqueSets[p] = new Set();
+      byPathUniqueSets[p].add(visitorKey);
+    });
+    const byPathUnique = Object.fromEntries(
+      Object.entries(byPathUniqueSets).map(([pathKey, set]) => [pathKey, set.size])
+    );
+    const sessionStats = buildSessionMetrics(filtered);
+
     if (format === 'json') {
-      const exportData = filtered.map((v) => ({
-        path: v.path,
-        timestamp: v.ts,
-        country: v.country || '',
-        city: v.city || '',
-      }));
+      const exportData = {
+        meta: {
+          exportedAt: now.toISOString(),
+          period,
+          totalViews: filtered.length,
+          uniqueVisitors: uniqueVisitorsForExport.size,
+          sessions: sessionStats,
+        },
+        rows: filtered.map((v) => ({
+          path: v.path,
+          timestamp: v.ts,
+          country: v.country || '',
+          city: v.city || '',
+          device: v.device || 'Unknown',
+          channel: v.channel || detectTrafficChannel(v.referrer || '', v.query || ''),
+          referrerHost: v.referrerHost || getReferrerHost(v.referrer || '') || '',
+          referrer: v.referrer || '',
+        })),
+      };
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="analytics_${period}_${now.toISOString().slice(0, 10)}.json"`);
       return res.json(exportData);
@@ -2277,6 +2784,7 @@ app.get('/api/analytics/export', async (req, res) => {
       const byCountry = {};
       const byRegion = {};
       const byDevice = {};
+      const byChannel = {};
 
       filtered.forEach((v) => {
         const p = v.path || '/';
@@ -2286,6 +2794,8 @@ app.get('/api/analytics/export', async (req, res) => {
         byRegion[regionKey] = (byRegion[regionKey] || 0) + 1;
         const deviceKey = v.device || 'Unknown';
         byDevice[deviceKey] = (byDevice[deviceKey] || 0) + 1;
+        const channelKey = v.channel || detectTrafficChannel(v.referrer || '', v.query || '');
+        byChannel[channelKey] = (byChannel[channelKey] || 0) + 1;
         try {
           let day = null;
           if (v.ts) {
@@ -2303,6 +2813,8 @@ app.get('/api/analytics/export', async (req, res) => {
           exportedAt: now.toISOString(),
           period,
           totalViews: filtered.length,
+          uniqueVisitors: uniqueVisitorsForExport.size,
+          sessions: sessionStats,
         },
         charts: {
           byDay: Object.entries(byDay)
@@ -2313,6 +2825,10 @@ app.get('/api/analytics/export', async (req, res) => {
             .sort((a, b) => b[1] - a[1])
             .slice(0, 20)
             .map(([path, views]) => ({ path, views })),
+          byPathUnique: Object.entries(byPathUnique)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20)
+            .map(([path, uniqueVisitors]) => ({ path, uniqueVisitors })),
           byCountry: Object.entries(byCountry)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 20)
@@ -2324,12 +2840,19 @@ app.get('/api/analytics/export', async (req, res) => {
           byDevice: Object.entries(byDevice)
             .sort((a, b) => b[1] - a[1])
             .map(([device, views]) => ({ device, views })),
+          byChannel: Object.entries(byChannel)
+            .sort((a, b) => b[1] - a[1])
+            .map(([channel, views]) => ({ channel, views })),
         },
         rows: filtered.map((v) => ({
           path: v.path,
           timestamp: v.ts,
           country: v.country || '',
           city: v.city || '',
+          device: v.device || 'Unknown',
+          channel: v.channel || detectTrafficChannel(v.referrer || '', v.query || ''),
+          referrerHost: v.referrerHost || getReferrerHost(v.referrer || '') || '',
+          referrer: v.referrer || '',
         })),
       };
 
@@ -2339,11 +2862,13 @@ app.get('/api/analytics/export', async (req, res) => {
     }
 
     // CSV export
-    const csvRows = ['Pagina,Data,Ora,Țara,Orașul'];
+    const csvRows = ['Pagina,Data,Ora,Țara,Orașul,Dispozitiv,Canal,Sursă host,Referrer'];
     filtered.forEach((v) => {
       const d = v.ts ? new Date(v.ts) : null;
       const dateStr = d ? d.toLocaleDateString('ro-RO') : '';
       const timeStr = d ? d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
+      const channel = v.channel || detectTrafficChannel(v.referrer || '', v.query || '');
+      const refHost = v.referrerHost || getReferrerHost(v.referrer || '') || '';
       const escapeCsv = (s) => {
         if (!s) return '';
         if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
@@ -2355,6 +2880,10 @@ app.get('/api/analytics/export', async (req, res) => {
         escapeCsv(timeStr),
         escapeCsv(v.country || ''),
         escapeCsv(v.city || ''),
+        escapeCsv(v.device || 'Unknown'),
+        escapeCsv(channel),
+        escapeCsv(refHost),
+        escapeCsv(v.referrer || ''),
       ].join(','));
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -2436,6 +2965,8 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log(`[API] 🚀 Server pornit pe http://localhost:${PORT} – login și /api funcționează acum`);
   const adminExists = fs.existsSync(ADMIN_SETTINGS_FILE);
   console.log(`[API] 📄 adminSettings.json: ${adminExists ? 'există' : 'LIPSEȘTE'}`);
+
+  await migrateAdminPasswordToHash();
 
   // Auto-translate reviews that are missing translations
   try {

@@ -12,6 +12,7 @@ import HomePage from './pages/HomePage';
 import { AuthProvider } from './contexts/AuthContext';
 import AnalyticsTracker from './components/AnalyticsTracker';
 import ScrollToTop from './components/ScrollToTop';
+import SeoManager from './components/SeoManager';
 
 const GalleryPage = lazy(() => import('./pages/GalleryPage'));
 const GalleryDetailPage = lazy(() => import('./pages/GalleryDetailPage'));
@@ -43,6 +44,7 @@ function AppRoutes() {
   return (
     <>
       <ScrollToTop />
+      <SeoManager />
       <AnalyticsTracker />
       {!isAdminArea && <FloatingButtons />}
       <Routes>
@@ -70,6 +72,15 @@ function AppRoutes() {
             <Header />
             <main className="flex-grow min-h-screen">
               <Suspense fallback={<PageLoader />}><GalleryDetailPage /></Suspense>
+            </main>
+            <Footer />
+          </div>
+        } />
+        <Route path="/mobilier/:categoryId" element={
+          <div className="flex flex-col min-h-screen bg-neutral-50">
+            <Header />
+            <main className="flex-grow min-h-screen">
+              <Suspense fallback={<PageLoader />}><GalleryPage /></Suspense>
             </main>
             <Footer />
           </div>

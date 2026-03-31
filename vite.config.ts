@@ -13,7 +13,8 @@ export default defineConfig({
   assetsInclude: ['**/*.JPG'],
   server: {
     host: true, // Permite acces din rețea
-    port: 5173,
+    port: 1573,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',

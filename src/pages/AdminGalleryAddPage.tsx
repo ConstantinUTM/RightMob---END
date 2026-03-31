@@ -5,9 +5,18 @@ import categoriesService, { type Category } from '../services/categoriesService'
 import { getAdminToken, useAuth } from '../contexts/AuthContext';
 import { getAllDetailFields, detailsFromMap } from '../lib/categoryDetailFields';
 import { translateBatch } from '../lib/translationService';
-import { Upload, ImagePlus, Trash2, Loader2, Languages } from 'lucide-react';
+import { Upload, ImagePlus, Loader2, Languages } from 'lucide-react';
 
 const ACCENT = '#374151';
+
+const safeTranslated = (source: string, translated?: string) => {
+  const src = (source || '').trim();
+  const tr = (translated || '').trim();
+  if (!tr) return src;
+  if (src.length >= 3 && tr.length <= 1) return src;
+  if (src.length >= 6 && tr.length <= Math.max(1, Math.floor(src.length * 0.2))) return src;
+  return tr;
+};
 
 const AdminGalleryAddPage: React.FC = () => {
   const [mainFile, setMainFile] = useState<File | null>(null);
@@ -85,16 +94,16 @@ const AdminGalleryAddPage: React.FC = () => {
         let results: Record<string, string> = {};
         if (items.length > 0) {
           results = await translateBatch(items);
-          aboutEn = results['about_en'] || '';
-          aboutRu = results['about_ru'] || '';
+          aboutEn = safeTranslated(aboutRo, results['about_en']);
+          aboutRu = safeTranslated(aboutRo, results['about_ru']);
         }
         detailRows.forEach((d, i) => {
           const textRo = (d.text || '').trim();
           detailsWithTranslations.push({
             title: d.title,
             text: textRo,
-            text_en: textRo ? (results[`d${i}_en`] || undefined) : undefined,
-            text_ru: textRo ? (results[`d${i}_ru`] || undefined) : undefined,
+            text_en: textRo ? safeTranslated(textRo, results[`d${i}_en`]) : undefined,
+            text_ru: textRo ? safeTranslated(textRo, results[`d${i}_ru`]) : undefined,
             images: [],
           });
         });
@@ -223,7 +232,7 @@ const AdminGalleryAddPage: React.FC = () => {
             </div>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} className="rounded border-neutral-300" />
-              <span className="text-sm text-neutral-700">Evidențiat în categorie</span>
+              <span className="text-sm text-neutral-700">Evidențiat în categorie (maxim 6/categorie)</span>
             </label>
           </div>
         </div>

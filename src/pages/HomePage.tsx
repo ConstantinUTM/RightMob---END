@@ -386,14 +386,8 @@ const CollectionsSection: React.FC<{ products: Product[] }> = ({ products }) => 
   ];
 
   return (
-    <section ref={ref} className="py-32 bg-gradient-to-b from-white via-blue-50/20 to-white relative">
-      {/* Decorative Elements (overflow-hidden doar aici ca border-ul cardurilor să nu se taie) */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-20 right-10 w-72 h-72 bg-blue-200/30 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-10 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl" />
-      </div>
-
-      <div className="container-custom relative z-10 pt-2">
+    <section ref={ref} className="py-32 relative overflow-hidden bg-[#f8f5f0]">
+      <div className="container-custom pt-2">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -420,7 +414,7 @@ const CollectionsSection: React.FC<{ products: Product[] }> = ({ products }) => 
               className="pt-1"
             >
               <Link
-                to={`/galerie?category=${collection.category}`}
+                to={`/mobilier/${collection.category}`}
                 className="group block relative h-[500px] rounded-3xl overflow-visible shadow-xl hover:shadow-2xl transition-all duration-500"
               >
                 {/* Image with Overlay (overflow-hidden doar pe imagine) */}

@@ -108,9 +108,8 @@ const Header: React.FC = () => {
   const handlePhoneWhatsApp = () => {
     setPhoneMenuOpen(false);
     sendTrack('whatsapp');
-    const { pageCtx, device, city, lang } = getHeaderContext();
-    const info = [`📱 ${device}`, city ? `📍 ${city}` : '', `🌐 ${lang}`, `📄 ${location.pathname}`].filter(Boolean).join('  |  ');
-    const msg = encodeURIComponent(`Bună ziua! 👋\n\n${pageCtx ? pageCtx + '\n\n' : ''}Aș dori mai multe detalii și o consultație.\n\n${info}\n\nVă mulțumesc!`);
+    const { pageCtx } = getHeaderContext();
+    const msg = encodeURIComponent(`Bună ziua! 👋\n\n${pageCtx ? pageCtx + '\n\n' : ''}Aș dori mai multe detalii și o consultație.\n\nVă mulțumesc!`);
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const url = isMobile ? `whatsapp://send?phone=${whatsappNumber}&text=${msg}` : `https://wa.me/${whatsappNumber}?text=${msg}`;
     window.open(url, '_blank');
@@ -126,9 +125,9 @@ const Header: React.FC = () => {
   };
 
   const buildGmailUrl = (target: { email: string; subject: string; intro: string }) => {
-    const { pageCtx, device, city, lang } = getHeaderContext();
+    const { pageCtx } = getHeaderContext();
     sendTrack(`email:${target.email}`);
-    const body = `Bună ziua,\n\n${target.intro}\n${pageCtx ? pageCtx + '\n' : ''}\nAștept mai multe detalii.\n\n---\nDispozitiv: ${device}\n${city ? `Locație aprox.: ${city}\n` : ''}Limba site: ${lang}\nPagina: ${location.pathname}\n---\n\nMulțumesc!\n`;
+    const body = `Bună ziua,\n\n${target.intro}\n${pageCtx ? pageCtx + '\n' : ''}\nAștept mai multe detalii.\n\nMulțumesc!\n`;
     return `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(target.email)}&su=${encodeURIComponent(target.subject)}&body=${encodeURIComponent(body)}`;
   };
 

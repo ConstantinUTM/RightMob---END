@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   BarChart3, PieChart as PieChartIcon, ArrowLeft, Download, Calendar,
   Globe, Clock, Eye, TrendingUp, MapPin, ChevronLeft, ChevronRight,
-  FileDown, Activity, ArrowUpRight, ArrowDownRight
+  FileDown, Activity, ArrowUpRight, ArrowDownRight, Users
 } from 'lucide-react';
 import { getAdminToken } from '../contexts/AuthContext';
 import galleryService from '../services/galleryService';
@@ -18,18 +18,39 @@ interface ViewEntry {
   country: string | null;
   city: string | null;
   device?: string | null;
+  channel?: string | null;
+  referrerHost?: string | null;
   ip?: string | null;
 }
 
 interface AnalyticsSummary {
   totalViews: number;
+  uniqueVisitors?: number;
+  uniqueVisitorsLast30d?: number;
+  uniqueVisitorsByPeriod?: {
+    all: number;
+    last7d: number;
+    last30d: number;
+    last90d: number;
+  };
   byPath: Record<string, number>;
+  byPathUnique?: Record<string, number>;
+  topPagesByUnique?: Array<{ path: string; count: number }>;
   byDay: Record<string, number>;
   byHour: Record<string, number>;
   byCountry: Record<string, number>;
   byCity: Record<string, number>;
   byRegion: Record<string, number>;
   byDevice: Record<string, number>;
+  byChannel?: Record<string, number>;
+  sessions?: {
+    total: number;
+    bounceRate: number;
+    avgDurationSec: number;
+    avgPages: number;
+    byChannel?: Record<string, number>;
+    topEntryPages?: Array<{ path: string; count: number }>;
+  };
   byPathPerDay: Record<string, Record<string, number>>;
   mostViewed: { path: string; count: number } | null;
   recent: ViewEntry[];
@@ -53,6 +74,11 @@ const formatDeviceLabel = (value?: string | null) => {
   if (normalized === 'desktop') return 'Calculator';
   if (normalized === 'mobile') return 'Telefon';
   if (normalized === 'tablet') return 'Tableta';
+  return String(value || 'Neclasificat');
+};
+
+const formatChannelLabel = (value?: string | null) => {
+  if (isUnknownAnalyticsValue(value)) return 'Neclasificat';
   return String(value || 'Neclasificat');
 };
 const getColor = (i: number) => CHART_COLORS[i % CHART_COLORS.length];
@@ -903,6 +929,21 @@ const AdminAnalyticsPage: React.FC = () => {
     const uniqueRegions = knownRegionEntries.length;
     const uniqueDevices = knownDeviceEntries.length;
     const uniquePages = Object.keys(analytics.byPath || {}).length;
+    const uniqueVisitors = typeof analytics.uniqueVisitors === 'number' ? analytics.uniqueVisitors : 0;
+    const uniqueVisitors30d = typeof analytics.uniqueVisitorsLast30d === 'number' ? analytics.uniqueVisitorsLast30d : 0;
+    const uniqueByPeriod = analytics.uniqueVisitorsByPeriod || {
+      all: uniqueVisitors,
+      last7d: 0,
+      last30d: uniqueVisitors30d,
+      last90d: 0,
+    };
+    const sessionsTotal = analytics.sessions?.total || 0;
+    const sessionsBounce = analytics.sessions?.bounceRate || 0;
+    const sessionsAvgPages = analytics.sessions?.avgPages || 0;
+    const sessionsAvgDurationSec = analytics.sessions?.avgDurationSec || 0;
+    const channels = Object.entries(analytics.byChannel || {}).sort((a, b) => b[1] - a[1]);
+    const topChannel = channels[0] || null;
+    const topPagesByUnique = Array.isArray(analytics.topPagesByUnique) ? analytics.topPagesByUnique : [];
     const peakHour = Object.entries(analytics.byHour || {}).sort((a, b) => b[1] - a[1])[0];
     const topRegion = knownRegionEntries[0] || null;
     const topDevice = knownDeviceEntries[0] || null;
@@ -944,6 +985,15 @@ const AdminAnalyticsPage: React.FC = () => {
       uniqueRegions,
       uniqueDevices,
       uniquePages,
+      uniqueVisitors,
+      uniqueVisitors30d,
+      uniqueByPeriod,
+      sessionsTotal,
+      sessionsBounce,
+      sessionsAvgPages,
+      sessionsAvgDurationSec,
+      topChannel,
+      topPagesByUnique,
       peakHour,
       topRegion,
       topDevice,
@@ -1090,13 +1140,27 @@ const AdminAnalyticsPage: React.FC = () => {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {stats && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
               <StatCard
                 icon={<Eye className="w-5 h-5 text-blue-600" />}
                 label="Total vizionări"
                 value={stats.total.toLocaleString('ro-RO')}
                 sub={`${stats.uniquePages} pagini unice`}
                 color="#3b82f6"
+              />
+              <StatCard
+                icon={<Users className="w-5 h-5 text-cyan-600" />}
+                label="Vizitatori unici"
+                value={stats.uniqueVisitors.toLocaleString('ro-RO')}
+                sub={`7z: ${stats.uniqueByPeriod.last7d} • 30z: ${stats.uniqueByPeriod.last30d} • 90z: ${stats.uniqueByPeriod.last90d}`}
+                color="#06b6d4"
+              />
+              <StatCard
+                icon={<Clock className="w-5 h-5 text-indigo-600" />}
+                label="Sesiuni"
+                value={stats.sessionsTotal.toLocaleString('ro-RO')}
+                sub={`bounce: ${stats.sessionsBounce}% • ${stats.sessionsAvgPages} pag/sesiune • ${stats.sessionsAvgDurationSec}s`}
+                color="#4f46e5"
               />
               <StatCard
                 icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
@@ -1190,6 +1254,22 @@ const AdminAnalyticsPage: React.FC = () => {
                     <p className="text-xs text-gray-500 mt-1">Acestea nu au IP geolocalizabil sau provin din medii locale/proxy.</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {stats && (
+            <div className="grid grid-cols-1 gap-6">
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Canal principal de trafic</h2>
+                {stats.topChannel ? (
+                  <>
+                    <p className="text-3xl font-bold text-gray-900">{formatChannelLabel(stats.topChannel[0])}</p>
+                    <p className="text-sm text-gray-500 mt-1">{stats.topChannel[1]} vizionări atribuite acestui canal</p>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">Canalele apar după primele vizite înregistrate.</p>
+                )}
               </div>
             </div>
           )}
@@ -1316,7 +1396,7 @@ const AdminAnalyticsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {/* Top gallery items */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1349,23 +1429,6 @@ const AdminAnalyticsPage: React.FC = () => {
                   })}
                 </div>
               )}
-            </div>
-
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-blue-600" />
-                Vizionări recente (rezumat)
-              </h2>
-              <p className="text-sm text-gray-500 mb-3">Un rezumat rapid al ultimelor accesări, direct în tab-ul de vizionări.</p>
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {(analytics.recent || []).slice(0, 10).map((v, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs py-1.5 border-b border-gray-50 last:border-0">
-                    <span className="text-gray-400 w-24 shrink-0">{formatDate(v.ts)}</span>
-                    <span className="text-gray-700 truncate">{formatPathLabel(v.path, galleryItems)}</span>
-                    <span className="ml-auto text-gray-400 truncate max-w-[140px]">{[v.city, v.country].filter(Boolean).join(', ') || '—'}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -1438,12 +1501,14 @@ const AdminAnalyticsPage: React.FC = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-700">Pagină</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-700">Data</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-700">Ora</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Dispozitiv</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Canal</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-700">Locație</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredRecent.length === 0 ? (
-                  <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Nicio vizionare în această perioadă.</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nicio vizionare în această perioadă.</td></tr>
                 ) : (
                 filteredRecent.slice(0, recentLimit).map((r, i) => {
                     const d = new Date(r.ts);
@@ -1464,6 +1529,8 @@ const AdminAnalyticsPage: React.FC = () => {
                         </td>
                         <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{dateStr}</td>
                         <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{timeStr}</td>
+                        <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{formatDeviceLabel(r.device)}</td>
+                        <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{formatChannelLabel(r.channel)}</td>
                         <td className="px-4 py-2.5 text-gray-600">
                           {[r.city, r.country].filter(Boolean).join(', ') || <span className="text-gray-300">—</span>}
                         </td>
