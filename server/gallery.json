@@ -1,15 +1,213 @@
 [
   {
-    "id": "1772136202579rdxkgc",
-    "filename": "1772136202561-Photo__93_of_95_.jpg",
-    "url": "/uploads/birou/regitratura/1772136202561-Photo__93_of_95_.jpg",
-    "category": "birou",
-    "description": "Regitratura",
+    "id": "1773782737694q8r1lo",
+    "filename": "1773782737670-IMG_9868.JPG",
+    "url": "/uploads/hol/lucrare/1773782737670-IMG_9868.JPG",
+    "category": "hol",
+    "description": "Garderoba",
+    "description_en": "Garderoba",
+    "description_ru": "Garderoba",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": true,
+    "visible": true,
+    "details": [
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/hol/lucrare/1773782737686-IMG_9869.JPG",
+            "filename": "1773782737686-IMG_9869.JPG"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-03-17T21:25:37.694Z",
+    "reviews": [],
+    "imageOrderUrls": [
+      "/uploads/hol/lucrare/1773782737670-IMG_9868.JPG",
+      "/uploads/hol/lucrare/1773782737686-IMG_9869.JPG"
+    ]
+  },
+  {
+    "id": "1773782427782j83164",
+    "filename": "1773782427763-IMG_9877.JPG",
+    "url": "/uploads/baie/lucrare/1773782427763-IMG_9877.JPG",
+    "category": "baie",
+    "description": "Baie",
+    "description_en": "Bathroom",
+    "description_ru": "Ванная",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": true,
+    "visible": true,
+    "details": [],
+    "createdAt": "2026-03-17T21:20:27.782Z",
+    "reviews": [],
+    "imageOrderUrls": [
+      "/uploads/baie/lucrare/1773782427763-IMG_9877.JPG"
+    ]
+  },
+  {
+    "id": "17737823476223v4ypi",
+    "filename": "1773782347598-IMG_9866.JPG",
+    "url": "/uploads/dormitor/noptieră/1773782347598-IMG_9866.JPG",
+    "category": "dormitor",
+    "description": "Noptieră",
+    "description_en": "Nightstand",
+    "description_ru": "Тумбочка",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": true,
+    "visible": true,
+    "details": [
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/dormitor/noptieră/1773782347615-IMG_9867.JPG",
+            "filename": "1773782347615-IMG_9867.JPG"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-03-17T21:19:07.622Z"
+  },
+  {
+    "id": "17737822333187e7q59",
+    "filename": "1773782233300-Photo__64_of_95_.jpg",
+    "url": "/uploads/baie/baie/1773782233300-Photo__64_of_95_.jpg",
+    "category": "baie",
+    "description": "Baie",
+    "description_en": "Bathroom",
+    "description_ru": "Ванная",
     "aboutDescription": "",
     "aboutDescription_ro": "",
     "aboutDescription_en": "",
     "aboutDescription_ru": "",
     "isPrimary": false,
+    "visible": true,
+    "details": [
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/baie/baie/1773782233302-Photo__63_of_95_.jpg",
+            "filename": "1773782233302-Photo__63_of_95_.jpg"
+          },
+          {
+            "url": "/uploads/baie/baie/1773782233304-Photo__65_of_95_.jpg",
+            "filename": "1773782233304-Photo__65_of_95_.jpg"
+          },
+          {
+            "url": "/uploads/baie/baie/1773782233316-Photo__66_of_95_.jpg",
+            "filename": "1773782233316-Photo__66_of_95_.jpg"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-03-17T21:17:13.318Z"
+  },
+  {
+    "id": "1773781990185jx6e2o",
+    "filename": "1773781990163-Photo__34_of_38_.jpg",
+    "url": "/uploads/hol/lucrare/1773781990163-Photo__34_of_38_.jpg",
+    "category": "hol",
+    "description": "Garderobă",
+    "description_en": "Garderobă",
+    "description_ru": "Garderobă",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": false,
+    "visible": true,
+    "details": [
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/hol/lucrare/1773781990168-Photo__35_of_38_.jpg",
+            "filename": "1773781990168-Photo__35_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/hol/lucrare/1773781990179-Photo__36_of_38_.jpg",
+            "filename": "1773781990179-Photo__36_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/hol/lucrare/1773781990184-Photo__38_of_38_.jpg",
+            "filename": "1773781990184-Photo__38_of_38_.jpg"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-03-17T21:13:10.185Z",
+    "reviews": []
+  },
+  {
+    "id": "1773781813125nt8a8x",
+    "filename": "1773781813099-IMG_9873.JPG",
+    "url": "/uploads/dormitor/noptiera/1773781813099-IMG_9873.JPG",
+    "category": "dormitor",
+    "description": "Noptiera",
+    "description_en": "Nightstand",
+    "description_ru": "Тумбочка",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": false,
+    "visible": true,
+    "details": [
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
+        "images": [
+          {
+            "url": "/uploads/dormitor/noptiera/1773781813116-IMG_9871.JPG",
+            "filename": "1773781813116-IMG_9871.JPG"
+          },
+          {
+            "url": "/uploads/dormitor/noptiera/1773782476545-IMG_9872.JPG",
+            "filename": "1773782476545-IMG_9872.JPG"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-03-17T21:10:13.125Z",
+    "reviews": []
+  },
+  {
+    "id": "1772136202579rdxkgc",
+    "filename": "1772136202561-Photo__93_of_95_.jpg",
+    "url": "/uploads/birou/regitratura/1772136202561-Photo__93_of_95_.jpg",
+    "category": "birou",
+    "description": "Registratura",
+    "aboutDescription": "",
+    "aboutDescription_ro": "",
+    "aboutDescription_en": "",
+    "aboutDescription_ru": "",
+    "isPrimary": true,
     "details": [
       {
         "title": "Țara de origine",
@@ -36,19 +234,22 @@
       }
     ],
     "createdAt": "2026-02-26T20:03:22.579Z",
-    "visible": true
+    "visible": true,
+    "reviews": [],
+    "description_en": "Reception desk",
+    "description_ru": "Ресепшн"
   },
   {
     "id": "1772136109906as07v7",
-    "filename": "1772136109887-Photo__21_of_38_.jpg",
-    "url": "/uploads/copii/camera-copii/1772136109887-Photo__21_of_38_.jpg",
+    "filename": "1772136109904-Photo__24_of_38_.jpg",
+    "url": "/uploads/copii/camera-copii/1772136109904-Photo__24_of_38_.jpg",
     "category": "copii",
     "description": "Camera copii",
     "aboutDescription": "",
     "aboutDescription_ro": "",
     "aboutDescription_en": "",
     "aboutDescription_ru": "",
-    "isPrimary": false,
+    "isPrimary": true,
     "details": [
       {
         "title": "",
@@ -81,19 +282,22 @@
             "filename": "1772136109903-Photo__23_of_38_.jpg"
           },
           {
-            "url": "/uploads/copii/camera-copii/1772136109904-Photo__24_of_38_.jpg",
-            "filename": "1772136109904-Photo__24_of_38_.jpg"
+            "url": "/uploads/copii/camera-copii/1772136109887-Photo__21_of_38_.jpg",
+            "filename": "1772136109887-Photo__21_of_38_.jpg"
           }
         ]
       }
     ],
     "createdAt": "2026-02-26T20:01:49.906Z",
-    "visible": true
+    "visible": true,
+    "reviews": [],
+    "description_en": "Children's room",
+    "description_ru": "Детская комната"
   },
   {
     "id": "1772135756566zwzmgs",
-    "filename": "1773781280806-2026-02-16_20.22.14.jpg",
-    "url": "/uploads/living/living-mobila/1773781280806-2026-02-16_20.22.14.jpg",
+    "filename": "1773781280872-IMG_9876.JPG",
+    "url": "/uploads/living/living-mobila/1773781280872-IMG_9876.JPG",
     "category": "living",
     "description": "Living mobila",
     "aboutDescription": "",
@@ -107,7 +311,18 @@
         "text": "Lemn",
         "text_en": "Wood",
         "text_ru": "Дерево",
+        "images": []
+      },
+      {
+        "title": "",
+        "text": "",
+        "text_en": "",
+        "text_ru": "",
         "images": [
+          {
+            "url": "/uploads/living/living-mobila/1773781280806-2026-02-16_20.22.14.jpg",
+            "filename": "1773781280806-2026-02-16_20.22.14.jpg"
+          },
           {
             "url": "/uploads/living/living-mobila/1773781280837-IMG_9856.JPG",
             "filename": "1773781280837-IMG_9856.JPG"
@@ -117,17 +332,13 @@
             "filename": "1773781280850-IMG_9874.JPG"
           }
         ]
-      },
-      {
-        "title": "",
-        "text": "",
-        "text_en": "",
-        "text_ru": "",
-        "images": []
       }
     ],
     "createdAt": "2026-02-26T19:55:56.566Z",
-    "visible": true
+    "visible": true,
+    "reviews": [],
+    "description_en": "Living room furniture",
+    "description_ru": "Мебель для гостиной"
   },
   {
     "id": "17721355222858650o7",
@@ -139,7 +350,7 @@
     "aboutDescription_ro": "Frumos",
     "aboutDescription_en": "",
     "aboutDescription_ru": "",
-    "isPrimary": true,
+    "isPrimary": false,
     "details": [
       {
         "title": "Țara de origine",
@@ -200,141 +411,72 @@
       }
     ],
     "createdAt": "2026-02-26T19:52:02.285Z",
-    "visible": true
+    "visible": true,
+    "description_en": "Commercial space",
+    "description_ru": "Коммерческое помещение"
   },
   {
     "id": "1771536299132hx6px8",
     "filename": "1771536299102-IMG_9859.JPG",
     "url": "/uploads/living/liing-2026/1771536299102-IMG_9859.JPG",
     "category": "living",
-    "description": "Mobilier test DA",
+    "description": "Mobilier",
     "isPrimary": true,
     "details": [
-      {
-        "title": "Producător",
-        "text": "swsdesfgh",
-        "text_en": "swsdesfgh",
-        "text_ru": "swsdesfgh",
-        "images": []
-      },
-      {
-        "title": "Tip",
-        "text": "q",
-        "text_en": ".",
-        "text_ru": "Q",
-        "images": []
-      },
-      {
-        "title": "Material fațadă",
-        "text": "eqrft",
-        "text_en": "eqrft",
-        "text_ru": "eqrft",
-        "images": []
-      },
-      {
-        "title": "Blat",
-        "text": "bbbbbbbbbbbbbb",
-        "text_en": "bbbbbbbbbbbbbbbb",
-        "text_ru": "bbbbbbbbbbbbbbbbb",
-        "images": []
-      },
-      {
-        "title": "Glisiere",
-        "text": "qqqqqqqqqqqqqqqqq",
-        "text_en": "qqqqqqqqqqqqq",
-        "text_ru": "qqqqqqqqqqqqq",
-        "images": []
-      },
-      {
-        "title": "Termen de fabricare",
-        "text": "312341",
-        "text_en": "312341",
-        "text_ru": "312341",
-        "images": []
-      },
-      {
-        "title": "Proiect",
-        "text": "4232t4",
-        "text_en": "4232t4",
-        "text_ru": "4232t4",
-        "images": []
-      },
-      {
-        "title": "Materiale fațadă",
-        "text": "345t324",
-        "text_en": "345t324",
-        "text_ru": "345t324",
-        "images": []
-      },
-      {
-        "title": "Tip sertare / glisiere",
-        "text": "324354324",
-        "text_en": "324354324",
-        "text_ru": "324354324",
-        "images": []
-      },
-      {
-        "title": "Produs",
-        "text": "w2e3r4t5r323",
-        "text_en": "w2e3r4t5r323",
-        "text_ru": "w2e3r4t5r323",
-        "images": []
-      },
-      {
-        "title": "Dimensiuni",
-        "text": "LALALAAL testare cica",
-        "text_en": "LALAAL CICA testing",
-        "text_ru": "LALAAL CICA тестирование",
-        "images": []
-      },
-      {
-        "title": "Material",
-        "text": "werfgt",
-        "text_en": "werfgt",
-        "text_ru": "werfgt",
-        "images": []
-      },
       {
         "title": "",
         "text": "",
         "text_en": "",
         "text_ru": "",
-        "images": []
+        "images": [
+          {
+            "url": "/uploads/living/mobilier/1773781041633-2026-02-16_20.21.59.jpg",
+            "filename": "1773781041633-2026-02-16_20.21.59.jpg"
+          },
+          {
+            "url": "/uploads/living/mobilier/1773781041642-IMG_9857.JPG",
+            "filename": "1773781041642-IMG_9857.JPG"
+          },
+          {
+            "url": "/uploads/living/mobilier/1773781041653-IMG_9858.JPG",
+            "filename": "1773781041653-IMG_9858.JPG"
+          },
+          {
+            "url": "/uploads/living/mobilier/1773781041675-IMG_9860.JPG",
+            "filename": "1773781041675-IMG_9860.JPG"
+          },
+          {
+            "url": "/uploads/living/mobilier/1773781168388-IMG_9861.JPG",
+            "filename": "1773781168388-IMG_9861.JPG"
+          },
+          {
+            "url": "/uploads/living/mobilier/1773781168400-IMG_9862.JPG",
+            "filename": "1773781168400-IMG_9862.JPG"
+          },
+          {
+            "url": "/uploads/living/mobilier/1773781168425-IMG_9864.JPG",
+            "filename": "1773781168425-IMG_9864.JPG"
+          }
+        ]
       }
     ],
     "createdAt": "2026-02-19T21:24:59.132Z",
     "aboutDescription": "Mobilier nou",
-    "aboutDescription_ro": "Mobilier nou, testam",
-    "aboutDescription_en": "New furniture, we test",
-    "aboutDescription_ru": "Новая мебель, тестируем"
+    "aboutDescription_ro": "Mobilier nou",
+    "aboutDescription_en": "New furniture",
+    "aboutDescription_ru": "Новая мебель",
+    "reviews": [],
+    "description_en": "Furniture",
+    "description_ru": "Мебель"
   },
   {
     "id": "1771368519332w3zkaq",
-    "filename": "1771368519329-Photo__15_of_38_.jpg",
-    "url": "/uploads/1771368519329-Photo__15_of_38_.jpg",
+    "filename": "1771368519323-Photo__13_of_38_.jpg",
+    "url": "/uploads/1771368519323-Photo__13_of_38_.jpg",
     "category": "baie",
-    "description": "poza baie",
+    "description": "Mobilier baie",
     "isPrimary": false,
     "details": [
-      {
-        "title": "Țara de origine",
-        "text": "wedrdgtew3q2ewrtf",
-        "text_en": "",
-        "text_ru": "",
-        "images": [
-          {
-            "url": "/uploads/1771368519331-Photo__16_of_38_.jpg",
-            "filename": "1771368519331-Photo__16_of_38_.jpg"
-          }
-        ]
-      },
-      {
-        "title": "Formă bucătărie",
-        "text": "defrgtrred",
-        "text_en": "",
-        "text_ru": "",
-        "images": []
-      },
       {
         "title": "",
         "text": "",
@@ -350,8 +492,24 @@
             "filename": "1771368519331-Photo__16_of_38_.jpg"
           },
           {
-            "url": "/uploads/1771368519323-Photo__13_of_38_.jpg",
-            "filename": "1771368519323-Photo__13_of_38_.jpg"
+            "url": "/uploads/baie/poza-baie/1773783557668-Photo__10_of_38_.jpg",
+            "filename": "1773783557668-Photo__10_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/baie/poza-baie/1773783557670-Photo__11_of_38_.jpg",
+            "filename": "1773783557670-Photo__11_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/baie/poza-baie/1773783557673-Photo__14_of_38_.jpg",
+            "filename": "1773783557673-Photo__14_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/baie/poza-baie/1773783557674-Photo__15_of_38_.jpg",
+            "filename": "1773783557674-Photo__15_of_38_.jpg"
+          },
+          {
+            "url": "/uploads/1771368519329-Photo__15_of_38_.jpg",
+            "filename": "1771368519329-Photo__15_of_38_.jpg"
           }
         ]
       }
@@ -360,7 +518,19 @@
     "aboutDescription": "",
     "aboutDescription_ro": "",
     "aboutDescription_en": "",
-    "aboutDescription_ru": ""
+    "aboutDescription_ru": "",
+    "description_en": "Bathroom furniture",
+    "description_ru": "Мебель для ванной",
+    "reviews": [],
+    "imageOrderUrls": [
+      "/uploads/1771368519323-Photo__13_of_38_.jpg",
+      "/uploads/1771368519329-Photo__15_of_38_.jpg",
+      "/uploads/1771368519331-Photo__16_of_38_.jpg",
+      "/uploads/baie/poza-baie/1773783557668-Photo__10_of_38_.jpg",
+      "/uploads/baie/poza-baie/1773783557670-Photo__11_of_38_.jpg",
+      "/uploads/baie/poza-baie/1773783557673-Photo__14_of_38_.jpg",
+      "/uploads/baie/poza-baie/1773783557674-Photo__15_of_38_.jpg"
+    ]
   },
   {
     "id": "1771366598614xtao90",
@@ -368,48 +538,13 @@
     "url": "/uploads/1771366598610-2026-02-16_20.35.51.jpg",
     "category": "bucatarie",
     "description": "Bucatarie",
-    "isPrimary": true,
+    "isPrimary": false,
     "details": [
-      {
-        "title": "Țara de origine",
-        "text": "eu",
-        "text_en": "me",
-        "text_ru": "Я...",
-        "images": [
-          {
-            "url": "/uploads/1771366598611-2026-02-16_20.36.04.jpg",
-            "filename": "1771366598611-2026-02-16_20.36.04.jpg"
-          },
-          {
-            "url": "/uploads/1771366598613-2026-02-16_20.36.17.jpg",
-            "filename": "1771366598613-2026-02-16_20.36.17.jpg"
-          }
-        ]
-      },
-      {
-        "title": "Material fațadă",
-        "text": "e234t5r",
-        "text_en": "e234t5r",
-        "text_ru": "e234t5r",
-        "images": []
-      },
-      {
-        "title": "Material carcasă",
-        "text": "342543",
-        "text_en": "342543",
-        "text_ru": "342543",
-        "images": []
-      },
-      {
-        "title": "Cornisă",
-        "text": "43refdcs",
-        "text_en": "43refdcs",
-        "text_ru": "43refdcs",
-        "images": []
-      },
       {
         "title": "",
         "text": "",
+        "text_en": "",
+        "text_ru": "",
         "images": [
           {
             "url": "/uploads/bucatarie/bucatarie/1772136310957-2026-02-16_20.37.38.jpg",
@@ -466,6 +601,18 @@
           {
             "url": "/uploads/bucatarie/bucatarie/1772136310977-2026-02-16_20.40.22.jpg",
             "filename": "1772136310977-2026-02-16_20.40.22.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1773782685117-2026-02-16_20.36.17.jpg",
+            "filename": "1773782685117-2026-02-16_20.36.17.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1773782685129-2026-02-16_20.36.35.jpg",
+            "filename": "1773782685129-2026-02-16_20.36.35.jpg"
+          },
+          {
+            "url": "/uploads/bucatarie/bucatarie/1773782685131-2026-02-16_20.36.48.jpg",
+            "filename": "1773782685131-2026-02-16_20.36.48.jpg"
           }
         ]
       }
@@ -474,6 +621,9 @@
     "aboutDescription": "",
     "aboutDescription_ro": "",
     "aboutDescription_en": "",
-    "aboutDescription_ru": ""
+    "aboutDescription_ru": "",
+    "description_en": "Kitchen",
+    "description_ru": "Кухня",
+    "reviews": []
   }
 ]
