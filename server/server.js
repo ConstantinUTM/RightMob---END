@@ -821,6 +821,44 @@ const writeAnalytics = async (data) => {
   return writeAnalyticsFile(data);
 };
 
+const syncDbFromJsonSnapshotsIfNeeded = async () => {
+  if (!useDb()) return;
+
+  try {
+    const galleryDb = await dbGallery.get([]);
+    const galleryFile = readGalleryFile();
+    if (Array.isArray(galleryFile) && galleryFile.length > (Array.isArray(galleryDb) ? galleryDb.length : 0)) {
+      await dbGallery.set(galleryFile);
+      console.log(`[DB Sync] Galerie sincronizată din JSON (${galleryFile.length} elemente).`);
+    }
+
+    const categoriesDb = await dbCategories.get([]);
+    const categoriesFile = readCategoriesFile();
+    if (Array.isArray(categoriesFile) && categoriesFile.length > (Array.isArray(categoriesDb) ? categoriesDb.length : 0)) {
+      await dbCategories.set(categoriesFile);
+      console.log(`[DB Sync] Categorii sincronizate din JSON (${categoriesFile.length} elemente).`);
+    }
+
+    const messagesDb = await dbMessages.get([]);
+    const messagesFile = readMessagesFile();
+    if (Array.isArray(messagesFile) && messagesFile.length > (Array.isArray(messagesDb) ? messagesDb.length : 0)) {
+      await dbMessages.set(messagesFile);
+      console.log(`[DB Sync] Mesaje sincronizate din JSON (${messagesFile.length} elemente).`);
+    }
+
+    const analyticsDb = await dbAnalytics.get({ views: [] });
+    const analyticsFile = readAnalyticsFile();
+    const dbViews = Array.isArray(analyticsDb?.views) ? analyticsDb.views.length : 0;
+    const fileViews = Array.isArray(analyticsFile?.views) ? analyticsFile.views.length : 0;
+    if (fileViews > dbViews) {
+      await dbAnalytics.set(analyticsFile);
+      console.log(`[DB Sync] Analytics sincronizat din JSON (${fileViews} views).`);
+    }
+  } catch (err) {
+    console.warn('[DB Sync] Sincronizarea din JSON a eșuat:', err?.message || err);
+  }
+};
+
 // Ensure uploads dir exists
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -3019,6 +3057,7 @@ app.listen(PORT, '0.0.0.0', async () => {
   const adminExists = fs.existsSync(ADMIN_SETTINGS_FILE);
   console.log(`[API] 📄 adminSettings.json: ${adminExists ? 'există' : 'LIPSEȘTE'}`);
 
+  await syncDbFromJsonSnapshotsIfNeeded();
   await migrateAdminPasswordToHash();
 
   // Auto-translate reviews that are missing translations
