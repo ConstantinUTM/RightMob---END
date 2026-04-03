@@ -64,6 +64,8 @@ const AdminGalleryAddPage: React.FC = () => {
     { value: '', label: '— Selectează categorie —' },
     ...categoryList.map((c) => ({ value: c.id, label: c.label })),
   ];
+  const mainImageMissing = !mainFile;
+  const categoryMissing = !category;
 
   const onUpload = async () => {
     if (!isAdmin) return alert('Autentifică-te ca admin.');
@@ -208,9 +210,12 @@ const AdminGalleryAddPage: React.FC = () => {
           <h2 className="font-semibold text-neutral-900 mb-4 flex items-center gap-2"><ImagePlus className="w-5 h-5" /> Imagine și informații</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Imagine principală *</label>
-              <input type="file" accept="image/*" onChange={(e) => setMainFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
+              <label className={`block text-sm font-medium mb-1 ${mainImageMissing ? 'text-red-600' : 'text-neutral-700'}`}>Imagine principală *</label>
+              <div className={`rounded-lg border px-3 py-2 ${mainImageMissing ? 'border-red-300 bg-red-50/40' : 'border-neutral-200'}`}>
+                <input type="file" accept="image/*" onChange={(e) => setMainFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
+              </div>
               {mainFile && <p className="mt-1 text-sm text-neutral-500">{mainFile.name}</p>}
+              {mainImageMissing && <p className="mt-1 text-xs text-red-600">Câmp obligatoriu.</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">Titlu produs</label>
@@ -225,10 +230,11 @@ const AdminGalleryAddPage: React.FC = () => {
               <input type="text" value={project} onChange={(e) => setProject(e.target.value)} className="w-full p-3 border border-neutral-200 rounded-lg" placeholder="Ex: Rezidență 2024" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Categorie *</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 border border-neutral-200 rounded-lg" disabled={categoriesLoading}>
+              <label className={`block text-sm font-medium mb-1 ${categoryMissing ? 'text-red-600' : 'text-neutral-700'}`}>Categorie *</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className={`w-full p-3 border rounded-lg ${categoryMissing ? 'border-red-300 bg-red-50/40' : 'border-neutral-200'}`} disabled={categoriesLoading}>
                 {categoryOptions.map((c) => <option key={c.value || 'empty'} value={c.value}>{c.label}</option>)}
               </select>
+              {categoryMissing && <p className="mt-1 text-xs text-red-600">Câmp obligatoriu.</p>}
             </div>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} className="rounded border-neutral-300" />

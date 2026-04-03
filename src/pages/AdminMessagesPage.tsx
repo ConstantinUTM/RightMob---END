@@ -31,6 +31,7 @@ const AdminMessagesPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageLoading, setMessageLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -100,6 +101,7 @@ const AdminMessagesPage: React.FC = () => {
       if (!response.ok) throw new Error('Failed to delete message');
       
       setMessages(prev => prev.filter(m => m.id !== id));
+      setSelectedIds((prev) => prev.filter((x) => x !== id));
       if (selectedMessage?.id === id) {
         setSelectedMessage(null);
       }
@@ -108,7 +110,65 @@ const AdminMessagesPage: React.FC = () => {
     }
   };
 
+  const markAllAsRead = async () => {
+    try {
+      const token = getAdminToken() || '';
+      const response = await fetch(`${getApiBase()}/api/admin/messages/read-all`, {
+        method: 'PUT',
+        headers: { 'x-admin-token': token }
+      });
+      if (!response.ok) throw new Error('Failed to update messages');
+
+      setMessages((prev) => prev.map((m) => ({ ...m, read: true })));
+      if (selectedMessage) {
+        setSelectedMessage({ ...selectedMessage, read: true });
+      }
+    } catch (err) {
+      console.error('Error marking all as read:', err);
+    }
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === messages.length) {
+      setSelectedIds([]);
+      return;
+    }
+    setSelectedIds(messages.map((m) => m.id));
+  };
+
+  const deleteSelectedMessages = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Sigur vrei să ștergi ${selectedIds.length} mesaj(e)?`)) return;
+
+    try {
+      const token = getAdminToken() || '';
+      const response = await fetch(`${getApiBase()}/api/admin/messages`, {
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+      if (!response.ok) throw new Error('Failed to delete messages');
+
+      const toDelete = new Set(selectedIds);
+      setMessages((prev) => prev.filter((m) => !toDelete.has(m.id)));
+      if (selectedMessage && toDelete.has(selectedMessage.id)) {
+        setSelectedMessage(null);
+      }
+      setSelectedIds([]);
+    } catch (err) {
+      console.error('Error deleting selected messages:', err);
+    }
+  };
+
   const unreadCount = messages.filter(m => !m.read).length;
+  const allSelected = messages.length > 0 && selectedIds.length === messages.length;
 
   if (loading || messageLoading) {
     return (
@@ -164,6 +224,30 @@ const AdminMessagesPage: React.FC = () => {
             >
               <div className="bg-gradient-to-r from-blue-600 to-red-600 p-4">
                 <h2 className="text-white font-semibold">Tot mesajele ({messages.length})</h2>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={markAllAsRead}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/20 text-white hover:bg-white/30 transition-colors"
+                    type="button"
+                  >
+                    Read all
+                  </button>
+                  <button
+                    onClick={toggleSelectAll}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/20 text-white hover:bg-white/30 transition-colors"
+                    type="button"
+                  >
+                    {allSelected ? 'Deselectează tot' : 'Selectează tot'}
+                  </button>
+                  <button
+                    onClick={deleteSelectedMessages}
+                    disabled={selectedIds.length === 0}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-500/90 text-white hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    type="button"
+                  >
+                    Șterge selectate ({selectedIds.length})
+                  </button>
+                </div>
               </div>
 
               {messages.length === 0 ? (
@@ -185,6 +269,15 @@ const AdminMessagesPage: React.FC = () => {
                         } ${!msg.read ? 'bg-blue-50' : ''}`}
                       >
                         <div className="flex items-start justify-between gap-2">
+                          <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(msg.id)}
+                              onChange={() => toggleSelected(msg.id)}
+                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              aria-label={`Selectează mesajul ${msg.fullName}`}
+                            />
+                          </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <p className={`font-semibold text-dark-900 truncate ${!msg.read ? 'font-bold' : ''}`}>

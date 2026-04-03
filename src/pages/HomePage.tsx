@@ -69,7 +69,7 @@ const HeroSection: React.FC = () => {
           className={`w-full h-full object-cover transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="eager"
           decoding="async"
-          fetchPriority="high"
+          {...({ fetchpriority: 'high' } as React.ImgHTMLAttributes<HTMLImageElement>)}
           onLoad={() => setImageLoaded(true)}
           onError={() => setHeroSrc(HERO_IMAGE_PUBLIC)}
         />

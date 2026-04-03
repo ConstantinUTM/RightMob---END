@@ -67,6 +67,7 @@ const ContactPage: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [phoneError, setPhoneError] = useState('');
 
   const phoneNumber = import.meta.env.VITE_COMPANY_PHONE || '+373 XX XX XX XX';
   const email = import.meta.env.VITE_COMPANY_EMAIL || 'contact@rightmob.md';
@@ -122,21 +123,39 @@ const ContactPage: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      const digits = value.replace(/\D/g, '').slice(0, 9);
+      setFormData((prev) => ({ ...prev, phone: digits }));
+      if (phoneError) setPhoneError('');
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus('idle');
+    setPhoneError('');
+
+    const normalizedPhone = formData.phone.trim();
+    if (normalizedPhone && !/^0\d{8}$/.test(normalizedPhone)) {
+      setPhoneError('Telefon invalid. Folosește format MD cu 9 cifre, ex: 078685363.');
+      setSubmitStatus('error');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const res = await fetch(`${getApiBase()}/api/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({ ...formData, phone: normalizedPhone, timestamp: new Date().toISOString() }),
       });
       if (!res.ok) throw new Error('Failed');
       setSubmitStatus('success');
+      setPhoneError('');
       setFormData({ fullName: '', email: '', phone: '', message: '' });
     } catch {
       setSubmitStatus('error');
@@ -189,7 +208,7 @@ const ContactPage: React.FC = () => {
           src={heroImage}
           alt="Contact"
           className="absolute inset-0 w-full h-full object-cover rounded-t-none rounded-b-3xl"
-          fetchPriority="high"
+          {...({ fetchpriority: 'high' } as React.ImgHTMLAttributes<HTMLImageElement>)}
           loading="eager"
           onError={(e) => {
             const el = e.target as HTMLImageElement;
@@ -335,8 +354,14 @@ const ContactPage: React.FC = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder={t('contact.placeholders.phone')}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400/30 transition-all placeholder:text-neutral-400 text-neutral-900"
+                      inputMode="numeric"
+                      maxLength={9}
+                      pattern="0[0-9]{8}"
+                      className={`w-full px-4 py-3 border rounded-lg focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400/30 transition-all placeholder:text-neutral-400 text-neutral-900 ${phoneError ? 'border-red-300 bg-red-50/40' : 'border-neutral-200'}`}
                     />
+                    <p className={`mt-1 text-xs ${phoneError ? 'text-red-600' : 'text-neutral-500'}`}>
+                      {phoneError || 'Format MD: 9 cifre, începe cu 0 (ex: 078685363).'}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-neutral-600 mb-1.5">{t('contact.message')} *</label>

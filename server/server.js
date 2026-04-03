@@ -239,6 +239,9 @@ const validatePasswordComplexity = (password) => {
   return true;
 };
 
+const normalizeMdPhone = (value) => String(value || '').replace(/\D/g, '').trim();
+const isValidMdPhone = (value) => /^0\d{8}$/.test(value);
+
 const createAdminToken = ({ sub, email }) => jwt.sign(
   { sub: sub || 'admin', email: email || '' },
   JWT_SECRET,
@@ -923,12 +926,17 @@ app.post('/api/messages', async (req, res) => {
       return res.status(400).json({ error: 'Numele, emailul și mesajul sunt obligatorii' });
     }
 
+    const normalizedPhone = phone != null ? normalizeMdPhone(phone) : '';
+    if (normalizedPhone && !isValidMdPhone(normalizedPhone)) {
+      return res.status(400).json({ error: 'Telefon invalid. Folosește format MD cu 9 cifre (ex: 078685363).' });
+    }
+
     const messages = await readMessages();
     const newMessage = {
       id: Date.now().toString(),
       fullName,
       email,
-      phone: phone != null ? String(phone).trim() : '',
+      phone: normalizedPhone,
       departmentEmail: departmentEmail != null ? String(departmentEmail).trim() : '',
       message,
       timestamp: timestamp || new Date().toISOString(),
@@ -1950,6 +1958,52 @@ app.get('/api/admin/messages/:id', async (req, res) => {
   res.json(message);
 });
 
+// PUT - Marchează toate mesajele ca citite (admin only)
+app.put('/api/admin/messages/read-all', async (req, res) => {
+  const adminToken = req.headers['x-admin-token'];
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const messages = await readMessages();
+  const updated = messages.map((m) => ({ ...m, read: true }));
+  if (await writeMessages(updated)) {
+    res.json({ message: 'Toate mesajele au fost marcate ca citite' });
+  } else {
+    res.status(500).json({ error: 'Eroare la actualizare' });
+  }
+});
+
+// DELETE - Șterge mai multe mesaje (admin only)
+app.delete('/api/admin/messages', async (req, res) => {
+  const adminToken = req.headers['x-admin-token'];
+  if (!isValidAdminToken(adminToken)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const ids = Array.isArray(req.body?.ids)
+    ? req.body.ids.map((id) => String(id)).filter(Boolean)
+    : [];
+
+  if (ids.length === 0) {
+    return res.status(400).json({ error: 'Trimite ids: string[]' });
+  }
+
+  const idSet = new Set(ids);
+  const messages = await readMessages();
+  const filteredMessages = messages.filter((m) => !idSet.has(String(m.id)));
+
+  if (messages.length === filteredMessages.length) {
+    return res.status(404).json({ error: 'Niciun mesaj nu a fost găsit pentru ștergere' });
+  }
+
+  if (await writeMessages(filteredMessages)) {
+    res.json({ message: 'Mesajele selectate au fost șterse', deletedCount: messages.length - filteredMessages.length });
+  } else {
+    res.status(500).json({ error: 'Eroare la ștergerea mesajelor' });
+  }
+});
+
 // PUT - Marchează un mesaj ca citit (admin only)
 app.put('/api/admin/messages/:id/read', async (req, res) => {
   const adminToken = req.headers['x-admin-token'];
@@ -2953,8 +3007,7 @@ app.use((err, req, res, next) => {
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/images')) return next();
+  app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)|\/images(?:\/|$)).*/, (req, res) => {
     res.sendFile(path.join(DIST_DIR, 'index.html'));
   });
   console.log('[API] Frontend (dist/) servit de Express.');
