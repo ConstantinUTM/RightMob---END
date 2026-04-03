@@ -125,7 +125,11 @@ const ContactPage: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === 'phone') {
-      const digits = value.replace(/\D/g, '').slice(0, 9);
+      const rawDigits = value.replace(/\D/g, '');
+      const normalizedMd = rawDigits.startsWith('373') && rawDigits.length >= 11
+        ? `0${rawDigits.slice(3)}`
+        : rawDigits;
+      const digits = normalizedMd.slice(0, 9);
       setFormData((prev) => ({ ...prev, phone: digits }));
       if (phoneError) setPhoneError('');
       return;
@@ -353,14 +357,14 @@ const ContactPage: React.FC = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      placeholder={t('contact.placeholders.phone')}
+                      placeholder="078685363"
                       inputMode="numeric"
                       maxLength={9}
                       pattern="0[0-9]{8}"
                       className={`w-full px-4 py-3 border rounded-lg focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400/30 transition-all placeholder:text-neutral-400 text-neutral-900 ${phoneError ? 'border-red-300 bg-red-50/40' : 'border-neutral-200'}`}
                     />
                     <p className={`mt-1 text-xs ${phoneError ? 'text-red-600' : 'text-neutral-500'}`}>
-                      {phoneError || 'Format MD: 9 cifre, începe cu 0 (ex: 078685363).'}
+                      {phoneError || 'Format MD local: 9 cifre, începe cu 0 (ex: 078685363).'}
                     </p>
                   </div>
                   <div>
