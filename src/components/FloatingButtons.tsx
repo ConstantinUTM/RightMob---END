@@ -9,13 +9,6 @@ function getDeviceInfo(): string {
   return 'Desktop';
 }
 
-function getDateTimeStr(): string {
-  const now = new Date();
-  const d = now.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const t = now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
-  return `${d}, ${t}`;
-}
-
 function getLocationFromTimezone(): string {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -57,13 +50,8 @@ function sendTrack(source: string): void {
 
 function buildMessage(format: 'whatsapp' | 'viber' | 'email'): string {
   const ctx = getPageContext();
-  const device = getDeviceInfo();
-  const dateTime = getDateTimeStr();
-  const city = getLocationFromTimezone();
-  const lang = getSiteLang();
 
   const detailsBlock = ctx.details ? `${ctx.details}\n\n` : '';
-  const infoLine = [`📱 ${device}`, city ? `📍 ${city}` : '', `🌐 ${lang}`, `📄 ${ctx.page}`].filter(Boolean).join('  |  ');
 
   if (format === 'email') {
     return (
@@ -71,12 +59,6 @@ function buildMessage(format: 'whatsapp' | 'viber' | 'email'): string {
       'V-am contactat prin intermediul site-ului RightMob.\n' +
       (ctx.details ? `${ctx.details}\n` : '') +
       '\nAș dori să solicit o consultație și mai multe detalii despre serviciile dumneavoastră.\n\n' +
-      '---\n' +
-      `Dispozitiv: ${device}\n` +
-      (city ? `Locație aprox.: ${city}\n` : '') +
-      `Limba site: ${lang}\n` +
-      `Pagina: ${ctx.page}\n` +
-      '---\n\n' +
       'Vă mulțumesc anticipat!\n' +
       'Cu respect,\n'
     );
@@ -87,7 +69,6 @@ function buildMessage(format: 'whatsapp' | 'viber' | 'email'): string {
       `Bună ziua!\n\n` +
       detailsBlock +
       `Aș dori mai multe detalii și o consultație.\n\n` +
-      `${infoLine}\n\n` +
       `Mulțumesc!`
     );
   }
@@ -96,7 +77,6 @@ function buildMessage(format: 'whatsapp' | 'viber' | 'email'): string {
     `Bună ziua! 👋\n\n` +
     detailsBlock +
     `Aș dori mai multe detalii și o consultație.\n\n` +
-    `${infoLine}\n\n` +
     `Vă mulțumesc!`
   );
 }
@@ -164,12 +144,9 @@ const FloatingButtons: React.FC = () => {
   const openEmail = (target: { email: string; subject: string; intro: string }) => {
     sendTrack(`email:${target.email}`);
     const ctx = getPageContext();
-    const device = getDeviceInfo();
-    const city = getLocationFromTimezone();
-    const lang = getSiteLang();
     const subject = encodeURIComponent(target.subject);
     const body = encodeURIComponent(
-      `Bună ziua,\n\n${target.intro}\n${ctx.details ? `\n${ctx.details}\n` : '\n'}\nAștept mai multe detalii.\n\n---\nDispozitiv: ${device}\n${city ? `Locație aprox.: ${city}\n` : ''}Limba site: ${lang}\nPagina: ${ctx.page}\n---\n\nMulțumesc!\n`
+      `Bună ziua,\n\n${target.intro}\n${ctx.details ? `\n${ctx.details}\n` : '\n'}\nAștept mai multe detalii.\n\nMulțumesc!\n`
     );
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(target.email)}&su=${subject}&body=${body}`;
     window.open(gmailUrl, '_blank', 'noopener,noreferrer');

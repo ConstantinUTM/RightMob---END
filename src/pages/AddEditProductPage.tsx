@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { 
   Save, 
   X, 
   Upload, 
   ArrowLeft, 
-  Image as ImageIcon,
   AlertCircle,
   Plus,
   Star
@@ -33,7 +31,7 @@ const CATEGORY_OPTIONS = [
 ];
 
 const AddEditProductPage: React.FC = () => {
-  const { isAdmin, loading: authLoading, currentUser } = useAuth();
+  const { isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);

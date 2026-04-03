@@ -326,32 +326,6 @@ const AdminSettings: React.FC = () => {
         <p className="text-gray-600">Gestionează-ți profilul și securitatea</p>
       </div>
 
-      {/* Try My Room - vizibilitate în header */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 card-lux-hover">
-        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Box className="w-5 h-5 text-primary-600" />
-          Pagina „Testează în camera mea”
-        </h2>
-        <div className="flex items-center justify-between">
-          <p className="text-gray-600">
-            Când este activată, linkul apare în meniul de navigare. Când este dezactivată, dispare din header.
-          </p>
-          <button
-            type="button"
-            onClick={handleTryInMyRoomToggle}
-            disabled={tryInMyRoomSaving}
-            className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${tryInMyRoomEnabled ? 'bg-primary-600' : 'bg-gray-200'}`}
-            role="switch"
-          >
-            <span className="sr-only">Activează / Dezactivează Try My Room</span>
-            <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition ${tryInMyRoomEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
-          </button>
-        </div>
-        <p className="text-sm text-gray-500 mt-2">
-          {tryInMyRoomEnabled ? 'Vizibil în header' : 'Ascuns din header'}
-        </p>
-      </div>
-
       {/* Email și telefon notificări mesaje */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 card-lux-hover">
         <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -582,6 +556,31 @@ const AdminSettings: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* Try My Room - mutat la final, card compact */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mt-6 card-lux-hover">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
+              <Box className="w-4 h-4 text-primary-600" />
+              Pagina „Testează în camera mea”
+            </h2>
+            <p className="text-sm text-gray-600">
+              {tryInMyRoomEnabled ? 'Vizibil în header' : 'Ascuns din header'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleTryInMyRoomToggle}
+            disabled={tryInMyRoomSaving}
+            className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${tryInMyRoomEnabled ? 'bg-primary-600' : 'bg-gray-200'}`}
+            role="switch"
+          >
+            <span className="sr-only">Activează / Dezactivează Try My Room</span>
+            <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition ${tryInMyRoomEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

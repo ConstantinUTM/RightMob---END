@@ -4,11 +4,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "dev:reset": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ports=3001,1573; $procIds=@(); foreach($p in $ports){ $portProcId=Get-NetTCPConnection -State Listen -LocalPort $p -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess; if($portProcId){$procIds+=$portProcId}}; $procIds=$procIds|Sort-Object -Unique; if($procIds.Count -gt 0){ Stop-Process -Id $procIds -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1 }; npm run dev\"",
     "dev": "concurrently --names api,vite \"npm run server\" \"npm run client\"",
     "dev:server": "node server/server.js",
-    "dev:client": "vite --host",
+    "dev:client": "vite --host --port 1573 --strictPort",
     "server": "node server/server.js",
-    "client": "vite --host",
+    "client": "vite --host --port 1573 --strictPort",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"

@@ -7,7 +7,6 @@ import {
   TrendingUp,
   Sparkles,
 } from 'lucide-react';
-import { useCurrency } from '../contexts/CurrencyContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getAllProducts } from '../services/productService';
 import { Product } from '../data/products';

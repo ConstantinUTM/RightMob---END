@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Sparkles, X, ChevronLeft, ChevronRight, MessageSquare, Star } from 'lucide-react';
 import galleryService from '../services/galleryService';
 import categoriesService from '../services/categoriesService';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { CATEGORY_LABELS } from '../components/Breadcrumbs';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getUploadsBase } from '../lib/api';
@@ -20,7 +21,6 @@ const GalleryDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [categoryList, setCategoryList] = useState<{ id: string; label: string }[]>([]);
@@ -40,7 +40,6 @@ const GalleryDetailPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    setError(null);
     galleryService
       .getGalleryItemById(id)
       .then((data) => {
@@ -211,6 +210,12 @@ const GalleryDetailPage: React.FC = () => {
             {t('gallery.backToGallery')}
           </Link>
 
+          <Breadcrumbs
+            currentLabel={getLocalizedField(item, 'description', lang) || t('gallery.noDescription')}
+            categoryId={item.category}
+            categoryLabels={categoryLabelsFallback}
+          />
+
           {/* Galerie: imagine mare, fără card de vânzare */}
           <header className="mb-10">
             {categoryLabel && (
@@ -232,7 +237,9 @@ const GalleryDetailPage: React.FC = () => {
             >
               <img
                 src={currentImageUrl}
-                alt={item.description || ''}
+                alt={getLocalizedField(item, 'description', lang) || 'Proiect mobilier RightMob'}
+                loading="eager"
+                decoding="async"
                 className="max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-lg pointer-events-none select-none"
                 draggable={false}
                 onError={(e) => {
@@ -264,7 +271,9 @@ const GalleryDetailPage: React.FC = () => {
                     >
                       <img
                         src={src}
-                        alt=""
+                        alt={`${getLocalizedField(item, 'description', lang) || 'Proiect mobilier'} - imagine ${idx + 1}`}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           const el = e.target as HTMLImageElement;
@@ -326,28 +335,46 @@ const GalleryDetailPage: React.FC = () => {
             </h2>
             {(() => {
               const visibleReviews = (item.reviews || []).filter((r: any) => r.visible !== false && (r.text || '').trim());
+              const totalRating = visibleReviews.reduce((sum: number, rev: any) => sum + (Number(rev.rating) || 5), 0);
+              const avgRating = visibleReviews.length ? (totalRating / visibleReviews.length).toFixed(1) : null;
               return (
                 <>
                   {visibleReviews.length > 0 && (
-                    <ul className="space-y-6 max-w-2xl mb-8">
+                    <div className="max-w-2xl mb-6 rounded-2xl border border-neutral-200 bg-white px-4 py-3 sm:px-5 sm:py-4 flex flex-wrap items-center gap-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-neutral-500">Scor mediu</p>
+                        <p className="text-xl font-semibold text-neutral-900">{avgRating}/5</p>
+                      </div>
+                      <div className="h-8 w-px bg-neutral-200" aria-hidden />
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-neutral-500">Total recenzii</p>
+                        <p className="text-xl font-semibold text-neutral-900">{visibleReviews.length}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {visibleReviews.length > 0 && (
+                    <ul className="space-y-4 max-w-2xl mb-8">
                       {visibleReviews.map((rev: any, i: number) => (
-                        <li key={rev.id || i} className="pl-4 border-l-2 border-neutral-200">
-                          <div className="flex items-center gap-1 mb-2" aria-label={`Rating ${rev.rating || 5} din 5`}>
-                            {Array.from({ length: 5 }, (_, starIdx) => (
-                              <Star
-                                key={starIdx}
-                                className={`w-4 h-4 ${(starIdx + 1) <= (rev.rating || 5) ? 'text-amber-400 fill-amber-400' : 'text-neutral-300'}`}
-                              />
-                            ))}
+                        <li key={rev.id || i} className="rounded-2xl border border-neutral-200 bg-white px-4 py-4 sm:px-5 sm:py-5">
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex items-center gap-1" aria-label={`Rating ${rev.rating || 5} din 5`}>
+                              {Array.from({ length: 5 }, (_, starIdx) => (
+                                <Star
+                                  key={starIdx}
+                                  className={`w-4 h-4 ${(starIdx + 1) <= (rev.rating || 5) ? 'text-amber-400 fill-amber-400' : 'text-neutral-300'}`}
+                                />
+                              ))}
+                            </div>
+                            {(rev.author || rev.date) && (
+                              <p className="text-xs text-neutral-500 text-right">
+                                {rev.author}
+                                {rev.author && rev.date ? ' · ' : ''}
+                                {rev.date ? new Date(rev.date).toLocaleDateString(language === 'ro' ? 'ro-RO' : language === 'ru' ? 'ru-RU' : 'en-GB') : ''}
+                              </p>
+                            )}
                           </div>
                           <p className="text-neutral-700 leading-relaxed whitespace-pre-line">{(language === 'en' ? rev.text_en : language === 'ru' ? rev.text_ru : rev.text_ro) || rev.text}</p>
-                          {(rev.author || rev.date) && (
-                            <p className="text-sm text-neutral-500 mt-2">
-                              {rev.author}
-                              {rev.author && rev.date ? ' · ' : ''}
-                              {rev.date ? new Date(rev.date).toLocaleDateString(language === 'ro' ? 'ro-RO' : language === 'ru' ? 'ru-RU' : 'en-GB') : ''}
-                            </p>
-                          )}
                         </li>
                       ))}
                     </ul>
@@ -383,11 +410,11 @@ const GalleryDetailPage: React.FC = () => {
                           setSubmittingReview(false);
                         }
                       }}
-                      className="max-w-2xl rounded-3xl border border-neutral-200 bg-gradient-to-br from-white to-neutral-50/70 shadow-[0_20px_50px_rgba(0,0,0,0.06)] p-5 sm:p-7 space-y-6"
+                      className="max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-[0_16px_35px_rgba(0,0,0,0.05)] p-5 sm:p-7 space-y-6"
                     >
                       <div className="pb-4 border-b border-neutral-200/80">
                         <label className="block text-sm font-semibold text-neutral-800 mb-3">{t('productDetail.ratingLabel')}</label>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           {Array.from({ length: 5 }, (_, i) => {
                             const value = i + 1;
                             const active = value <= commentRating;
@@ -411,11 +438,12 @@ const GalleryDetailPage: React.FC = () => {
                         <textarea
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
-                          rows={4}
+                          rows={5}
                           className="w-full px-4 py-3 border border-neutral-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
                           placeholder={t('productDetail.addComment')}
                           required
                         />
+                        <p className="text-xs text-neutral-500 mt-2">Scrie pe scurt experiența ta cu lucrarea: calitate, finisaje, comunicare, montaj.</p>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-center">
                         <input
@@ -438,7 +466,7 @@ const GalleryDetailPage: React.FC = () => {
                       <button
                         type="submit"
                         disabled={submittingReview || !commentText.trim()}
-                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-semibold bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                       >
                         {submittingReview ? '...' : t('productDetail.submitReview')}
                       </button>

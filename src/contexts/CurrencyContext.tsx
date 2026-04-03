@@ -18,13 +18,6 @@ const currencySymbols: Record<CurrencyCode, string> = {
   USD: '$',
 };
 
-const currencyLabels: Record<CurrencyCode, string> = {
-  LEI: 'RO LEI',
-  EUR: 'EU EUR',
-  MDL: 'MD MDL',
-  USD: 'US USD',
-};
-
 interface CurrencyContextValue {
   currency: CurrencyCode;
   setCurrency: (code: CurrencyCode) => void;

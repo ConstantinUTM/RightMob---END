@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Clock } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getApiBase } from '../lib/api';
 import Logo from './Logo';
 
 const Footer: React.FC = () => {
@@ -26,6 +27,36 @@ const Footer: React.FC = () => {
 
   const handleMapsClick = () => {
     window.open(`https://maps.google.com/?q=${encodeURIComponent(addressForMap)}`, '_blank');
+  };
+
+  const sendTrack = (source: string) => {
+    const device = /iPhone/i.test(navigator.userAgent)
+      ? 'iPhone'
+      : /iPad/i.test(navigator.userAgent)
+        ? 'iPad'
+        : /Android/i.test(navigator.userAgent)
+          ? 'Android'
+          : 'Desktop';
+    const city = (() => {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop()?.replace(/_/g, ' ') || '';
+      } catch {
+        return '';
+      }
+    })();
+    const lang = (localStorage.getItem('app_lang') || document.documentElement.lang || 'ro').toUpperCase();
+
+    fetch(`${getApiBase()}/api/email-track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        device,
+        city,
+        lang,
+        page: window.location.pathname,
+        source,
+      }),
+    }).catch(() => {});
   };
 
   return (
@@ -68,10 +99,10 @@ const Footer: React.FC = () => {
             <h4 className="text-lg font-semibold mb-6">{t('collections.title')}</h4>
             <ul className="space-y-3">
               {[
-                { name: t('products.categories.living'), path: '/galerie?category=living' },
-                { name: t('products.categories.bedroom'), path: '/galerie?category=dormitor' },
-                { name: t('products.categories.dining'), path: '/galerie?category=bucatarie' },
-                { name: t('products.categories.office'), path: '/galerie?category=birou' },
+                { name: t('products.categories.living'), path: '/mobilier/living' },
+                { name: t('products.categories.bedroom'), path: '/mobilier/dormitor' },
+                { name: t('products.categories.dining'), path: '/mobilier/bucatarie' },
+                { name: t('products.categories.office'), path: '/mobilier/birou' },
               ].map((collection) => (
                 <li key={collection.name}>
                   <Link
@@ -101,7 +132,11 @@ const Footer: React.FC = () => {
               </li>
               <li className="flex items-start space-x-3 text-gray-400">
                 <Mail className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
-                <a href={`mailto:${email}`} className="hover:text-primary-400 transition-colors">
+                <a
+                  href={`mailto:${email}`}
+                  onClick={() => sendTrack(`email:${email}`)}
+                  className="hover:text-primary-400 transition-colors"
+                >
                   {email}
                 </a>
               </li>
@@ -125,7 +160,8 @@ const Footer: React.FC = () => {
             <div className="flex items-center space-x-3">
               {/* WhatsApp */}
               <a
-                href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Bună ziua! 👋\n\nV-am contactat prin site-ul RightMob.\nAș dori mai multe detalii și o consultație.\n\n📅 ${new Date().toLocaleDateString('ro-RO')}  |  📱 ${/iPhone|iPad|Android/i.test(navigator.userAgent) ? 'Mobil' : 'Desktop'}\n\nVă mulțumesc!`)}`}
+                href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Bună ziua! 👋\n\nV-am contactat prin site-ul RightMob.\nAș dori mai multe detalii și o consultație.\n\nVă mulțumesc!`)}`}
+                onClick={() => sendTrack('whatsapp')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="social-icon-footer whatsapp"
@@ -139,6 +175,7 @@ const Footer: React.FC = () => {
               {/* Viber */}
               <a
                 href={`viber://chat?number=%2B${import.meta.env.VITE_VIBER_NUMBER || '373XXXXXXXX'}`}
+                onClick={() => sendTrack('viber')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="social-icon-footer viber"

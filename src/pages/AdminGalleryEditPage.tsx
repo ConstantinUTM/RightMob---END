@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import galleryService from '../services/galleryService';
 import categoriesService, { type Category } from '../services/categoriesService';
-import { getAdminToken, useAuth } from '../contexts/AuthContext';
+import { getAdminToken } from '../contexts/AuthContext';
 import { getUploadsBase } from '../lib/api';
 import { translateBatch } from '../lib/translationService';
-import { getAllDetailFields, detailsFromMap, detailsToMap, detailsToMapMultilingual, detailsFromMapMultilingual } from '../lib/categoryDetailFields';
+import { getAllDetailFields, detailsToMapMultilingual, detailsFromMapMultilingual } from '../lib/categoryDetailFields';
 import { Loader2, Star, ImagePlus, Trash2, Languages, MessageSquare, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ACCENT = '#374151';
@@ -19,6 +19,15 @@ const toBase64 = (f: File) =>
   });
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15MB
+
+const safeTranslated = (source: string, translated?: string) => {
+  const src = (source || '').trim();
+  const tr = (translated || '').trim();
+  if (!tr) return src;
+  if (src.length >= 3 && tr.length <= 1) return src;
+  if (src.length >= 6 && tr.length <= Math.max(1, Math.floor(src.length * 0.2))) return src;
+  return tr;
+};
 
 const collectImageEntries = (it: any): Array<{ url: string; filename?: string }> => {
   const out: Array<{ url: string; filename?: string }> = [];
@@ -235,13 +244,15 @@ const AdminGalleryEditPage: React.FC = () => {
         items.push({ id: `d_${label}_en`, text, to: 'en' }, { id: `d_${label}_ru`, text, to: 'ru' });
       });
       const results = await translateBatch(items);
-      if (results['about_en']) setAboutDescriptionEn(results['about_en']);
-      if (results['about_ru']) setAboutDescriptionRu(results['about_ru']);
+      if (aboutSource) {
+        setAboutDescriptionEn(safeTranslated(aboutSource, results['about_en']));
+        setAboutDescriptionRu(safeTranslated(aboutSource, results['about_ru']));
+      }
       const newEn: Record<string, string> = {};
       const newRu: Record<string, string> = {};
-      detailSources.forEach(({ label }) => {
-        const en = results[`d_${label}_en`];
-        const ru = results[`d_${label}_ru`];
+      detailSources.forEach(({ label, text }) => {
+        const en = safeTranslated(text, results[`d_${label}_en`]);
+        const ru = safeTranslated(text, results[`d_${label}_ru`]);
         if (en) newEn[label] = en;
         if (ru) newRu[label] = ru;
       });
@@ -422,7 +433,7 @@ const AdminGalleryEditPage: React.FC = () => {
           </div>
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} className="rounded border-neutral-300" />
-            <span className="text-sm text-neutral-700 flex items-center gap-1"><Star className="w-4 h-4" /> Prioritar în categorie</span>
+            <span className="text-sm text-neutral-700 flex items-center gap-1"><Star className="w-4 h-4" /> Prioritar în categorie (maxim 6)</span>
           </label>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">Toate pozele</label>

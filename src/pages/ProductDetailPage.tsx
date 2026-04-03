@@ -121,19 +121,20 @@ const ProductDetailPage: React.FC = () => {
     if (language === 'ro') return item.materials;
     return item.translations?.[language as 'en' | 'ru']?.materials || item.materials;
   };
-  const getColorName = (colorVariant: any, index: number) => {
+  const getColorName = (colorVariant: any) => {
     if (language === 'ro') return colorVariant.name;
     return colorVariant.translations?.[language as 'en' | 'ru'] || colorVariant.name;
   };
 
-  const hasColorVariants = product.colorVariants && product.colorVariants.length > 0;
+  const colorVariants = product.colorVariants || [];
+  const hasColorVariants = colorVariants.length > 0;
   const fallbackImages = product.images && product.images.length > 0
     ? product.images
     : product.image
       ? [product.image]
       : [];
   const currentVariantImages = hasColorVariants
-    ? product.colorVariants[selectedColorIndex]?.images || []
+    ? colorVariants[selectedColorIndex]?.images || []
     : [];
   const currentImages = currentVariantImages.length > 0
     ? currentVariantImages
@@ -144,7 +145,7 @@ const ProductDetailPage: React.FC = () => {
     Math.max(currentImages.length - 1, 0)
   );
   const currentColorInStock = hasColorVariants
-    ? product.colorVariants[selectedColorIndex]?.inStock ?? product.inStock
+    ? colorVariants[selectedColorIndex]?.inStock ?? product.inStock
     : product.inStock;
 
   const handleColorChange = (index: number) => {
@@ -333,7 +334,7 @@ const ProductDetailPage: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <span>{getColorName(variant, index)}</span>
+                      <span>{getColorName(variant)}</span>
                       {!variant.inStock && (
                         <span className="text-xs text-red-600 ml-1">({t('productDetail.soldOut')})</span>
                       )}

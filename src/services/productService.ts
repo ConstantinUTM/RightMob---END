@@ -29,9 +29,13 @@ export type GalleryReview = {
   source?: 'owner' | 'visitor'
 };
 
-const mapGalleryToProduct = (item: GalleryItem & { reviews?: GalleryReview[] }): Product & { reviews?: GalleryReview[] } => {
+const mapGalleryToProduct = (item: GalleryItem & { reviews?: GalleryReview[] }): Product & { reviewList?: GalleryReview[] } => {
+  const parsedId = Number(item.id);
+  const safeId = Number.isFinite(parsedId) ? parsedId : Date.now();
+  const reviews = Array.isArray((item as any).reviews) ? (item as any).reviews : [];
+
   return {
-    id: item.id,
+    id: safeId,
     name: item.description || 'Galerie item',
     category: item.category || '',
     price: 0,
@@ -46,12 +50,12 @@ const mapGalleryToProduct = (item: GalleryItem & { reviews?: GalleryReview[] }):
     colorVariants: [],
     inStock: true,
     rating: 5,
-    reviews: Array.isArray((item as any).reviews) ? (item as any).reviews.filter((r: any) => r.visible !== false).length : 0,
+    reviews: reviews.filter((r: any) => r.visible !== false).length,
     isNew: false,
     isBestseller: false,
     specificFeatures: {},
-    reviewList: (item as any).reviews || []
-  } as Product & { reviewList?: GalleryReview[] };
+    reviewList: reviews
+  };
 };
 
 export const getAllProducts = async (): Promise<Product[]> => {

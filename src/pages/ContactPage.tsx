@@ -6,8 +6,6 @@ import { useSiteContent } from '../contexts/SiteContentContext';
 import { getApiBase } from '../lib/api';
 
 const ACCENT = '#374151';
-const RED = '#dc2626';
-const BLUE = '#1d4ed8';
 const CREAM = '#FAF8F5';
 const CHARCOAL = '#1a1a1a';
 const WARM_GREY = '#5c5c5c';
@@ -18,28 +16,20 @@ const SUPPORT_EMAILS = [
     label: 'Informații generale',
     email: 'info@rightmob.md',
     note: 'Întrebări despre produse, showroom și colaborări.',
-    responseTime: 'Răspuns în 1-2 ore',
-    bestFor: 'Consultanță inițială',
   },
   {
     type: 'offer' as const,
     label: 'Oferte personalizate',
     email: 'oferta@rightmob.md',
     note: 'Solicitări de preț pentru mobilier la comandă.',
-    responseTime: 'Răspuns în aceeași zi',
-    bestFor: 'Proiecte la comandă',
   },
   {
     type: 'orders' as const,
     label: 'Comenzi',
     email: 'comenzi@rightmob.md',
     note: 'Status comandă, livrare și instalare.',
-    responseTime: 'Prioritate livrare',
-    bestFor: 'Comenzi active',
   },
 ];
-
-const LOGO_COLOR_ORDER = [RED, BLUE, RED] as const;
 
 const iconByType = {
   info: (
@@ -77,6 +67,7 @@ const ContactPage: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [phoneError, setPhoneError] = useState('');
 
   const phoneNumber = import.meta.env.VITE_COMPANY_PHONE || '+373 XX XX XX XX';
   const email = import.meta.env.VITE_COMPANY_EMAIL || 'contact@rightmob.md';
@@ -102,16 +93,6 @@ const ContactPage: React.FC = () => {
   }, []);
 
   const buildGmailCardUrl = (type: 'info' | 'offer' | 'orders', targetEmail: string) => {
-    const device = /iPhone/i.test(navigator.userAgent) ? 'iPhone' : /iPad/i.test(navigator.userAgent) ? 'iPad' : /Android/i.test(navigator.userAgent) ? 'Android' : 'Desktop';
-    const city = (() => {
-      try {
-        return Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop()?.replace(/_/g, ' ') || '';
-      } catch {
-        return '';
-      }
-    })();
-    const lang = (localStorage.getItem('app_lang') || localStorage.getItem('language') || localStorage.getItem('lang') || 'ro').toUpperCase();
-
     const contentByType = {
       info: {
         subject: 'Solicitare informații generale - RightMob',
@@ -135,41 +116,87 @@ const ContactPage: React.FC = () => {
       '',
       'Aștept mai multe detalii.',
       '',
-      '---',
-      `Dispozitiv: ${device}`,
-      city ? `Locație aprox.: ${city}` : '',
-      `Limba site: ${lang}`,
-      `Pagina: ${window.location.pathname}`,
-      '---',
-      '',
       'Mulțumesc!',
-    ].filter(Boolean).join('\n');
+    ].join('\n');
 
     return `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(targetEmail)}&su=${encodeURIComponent(selected.subject)}&body=${encodeURIComponent(body)}`;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      const rawDigits = value.replace(/\D/g, '');
+      const normalizedMd = rawDigits.startsWith('373') && rawDigits.length >= 11
+        ? `0${rawDigits.slice(3)}`
+        : rawDigits;
+      const digits = normalizedMd.slice(0, 9);
+      setFormData((prev) => ({ ...prev, phone: digits }));
+      if (phoneError) setPhoneError('');
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus('idle');
+    setPhoneError('');
+
+    const normalizedPhone = formData.phone.trim();
+    if (normalizedPhone && !/^0\d{8}$/.test(normalizedPhone)) {
+      setPhoneError('Telefon invalid. Folosește format MD cu 9 cifre, ex: 078685363.');
+      setSubmitStatus('error');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const res = await fetch(`${getApiBase()}/api/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({ ...formData, phone: normalizedPhone, timestamp: new Date().toISOString() }),
       });
       if (!res.ok) throw new Error('Failed');
       setSubmitStatus('success');
+      setPhoneError('');
       setFormData({ fullName: '', email: '', phone: '', message: '' });
     } catch {
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const sendTrack = (source: string, pageDetails = '') => {
+    const device = /iPhone/i.test(navigator.userAgent)
+      ? 'iPhone'
+      : /iPad/i.test(navigator.userAgent)
+        ? 'iPad'
+        : /Android/i.test(navigator.userAgent)
+          ? 'Android'
+          : 'Desktop';
+    const city = (() => {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop()?.replace(/_/g, ' ') || '';
+      } catch {
+        return '';
+      }
+    })();
+    const lang = (localStorage.getItem('app_lang') || document.documentElement.lang || 'ro').toUpperCase();
+
+    fetch(`${getApiBase()}/api/email-track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        device,
+        city,
+        lang,
+        page: window.location.pathname,
+        pageDetails,
+        source,
+      }),
+    }).catch(() => {});
   };
 
   return (
@@ -185,7 +212,7 @@ const ContactPage: React.FC = () => {
           src={heroImage}
           alt="Contact"
           className="absolute inset-0 w-full h-full object-cover rounded-t-none rounded-b-3xl"
-          fetchpriority="high"
+          {...({ fetchpriority: 'high' } as React.ImgHTMLAttributes<HTMLImageElement>)}
           loading="eager"
           onError={(e) => {
             const el = e.target as HTMLImageElement;
@@ -258,7 +285,8 @@ const ContactPage: React.FC = () => {
                     {phoneNumber}
                   </a>
                   <a
-                    href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Bună ziua! 👋\n\nV-am contactat prin site-ul RightMob.\nAș dori mai multe detalii și o consultație.\n\n📅 ${new Date().toLocaleDateString('ro-RO')}  |  📱 ${/iPhone|iPad|Android/i.test(navigator.userAgent) ? 'Mobil' : 'Desktop'}\n\nVă mulțumesc!`)}`}
+                    href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Bună ziua! Aș dori mai multe detalii despre produsele RightMob.')}`}
+                    onClick={() => sendTrack('whatsapp', 'Click WhatsApp din blocul principal de contact')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="ml-2 p-1.5 rounded-full text-[#25D366] hover:bg-[#25D366]/10 transition-colors"
@@ -280,9 +308,9 @@ const ContactPage: React.FC = () => {
                 </li>
                 <li className="flex items-center gap-3">
                   <Mail className="w-5 h-5 shrink-0 text-neutral-800" />
-                  <a href={`mailto:${email}`} className="text-neutral-700 hover:text-neutral-900 hover:underline underline-offset-4 text-sm md:text-base break-all transition-colors">
+                  <span className="text-neutral-700 text-sm md:text-base break-all transition-colors">
                     {email}
-                  </a>
+                  </span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Clock className="w-5 h-5 shrink-0 text-neutral-800" />
@@ -329,9 +357,15 @@ const ContactPage: React.FC = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      placeholder={t('contact.placeholders.phone')}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400/30 transition-all placeholder:text-neutral-400 text-neutral-900"
+                      placeholder="078685363"
+                      inputMode="numeric"
+                      maxLength={9}
+                      pattern="0[0-9]{8}"
+                      className={`w-full px-4 py-3 border rounded-lg focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400/30 transition-all placeholder:text-neutral-400 text-neutral-900 ${phoneError ? 'border-red-300 bg-red-50/40' : 'border-neutral-200'}`}
                     />
+                    <p className={`mt-1 text-xs ${phoneError ? 'text-red-600' : 'text-neutral-500'}`}>
+                      {phoneError || 'Format MD local: 9 cifre, începe cu 0 (ex: 078685363).'}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-neutral-600 mb-1.5">{t('contact.message')} *</label>
@@ -349,7 +383,7 @@ const ContactPage: React.FC = () => {
                     type="submit"
                     disabled={isSubmitting}
                     className="group w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 font-semibold text-white rounded-xl transition-all duration-200 disabled:opacity-60 hover:opacity-95"
-                    style={{ background: `linear-gradient(90deg, ${ACCENT} 0%, ${RED} 100%)` }}
+                    style={{ background: ACCENT }}
                   >
                     {isSubmitting ? t('contact.sending') : t('contact.send')}
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
@@ -371,78 +405,41 @@ const ContactPage: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15 }}
-            className="mb-16"
+            className="mb-14"
           >
-            <div className="relative rounded-3xl p-6 md:p-9 border overflow-hidden" style={{ borderColor: 'rgba(26,26,26,0.08)', background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #f8fafc 100%)' }}>
-              <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(220,38,38,0.12)' }} />
-              <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(37,99,235,0.12)' }} />
-              <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(17,24,39,0.05) 1px, transparent 1px)', backgroundSize: '22px 22px', opacity: 0.35 }} />
+            <div className="rounded-2xl p-4 md:p-5 border bg-white" style={{ borderColor: 'rgba(26,26,26,0.08)' }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {SUPPORT_EMAILS.map((item, idx) => {
+                  const accent = idx === 1 ? '#2563eb' : '#dc2626';
+                  return (
+                    <motion.a
+                      href={buildGmailCardUrl(item.type, item.email)}
+                      onClick={() => sendTrack(`email:${item.email}`, `Click email dedicat: ${item.label}`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      key={item.email}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.08 + idx * 0.06 }}
+                      className="group rounded-xl p-4 border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md bg-white"
+                      style={{ borderColor: `${accent}40` }}
+                    >
+                      <div className="inline-flex items-center justify-center rounded-lg w-10 h-10 mb-2" style={{ color: accent, backgroundColor: `${accent}14` }}>
+                        {iconByType[item.type]}
+                      </div>
 
-              <div className="relative z-10">
-                <div className="mb-7 md:mb-8">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-500 mb-2">
-                    Emailuri dedicate
-                  </p>
-                  <h3 className="text-2xl md:text-[36px] font-serif font-bold leading-tight" style={{ color: CHARCOAL }}>
-                    Alege adresa corectă pentru răspuns rapid
-                  </h3>
-                  <p className="text-sm md:text-base text-neutral-600 mt-3 max-w-2xl">
-                    Fiecare adresă merge spre o echipă diferită, astfel cererea ta ajunge direct la persoana potrivită.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                  {SUPPORT_EMAILS.map((item, idx) => {
-                    const accent = LOGO_COLOR_ORDER[idx % LOGO_COLOR_ORDER.length];
-                    return (
-                      <motion.a
-                        key={item.email}
-                        href={buildGmailCardUrl(item.type, item.email)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: 0.08 + idx * 0.06 }}
-                        className="group relative rounded-2xl p-5 border bg-white/95 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl overflow-hidden"
-                        style={{ borderColor: `${accent}2e`, boxShadow: '0 14px 30px rgba(15,23,42,0.08)' }}
-                      >
-                        <div className="absolute left-0 top-0 h-full w-1.5" style={{ background: `linear-gradient(180deg, ${accent} 0%, ${accent}99 100%)` }} />
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ background: `radial-gradient(220px circle at 80% 20%, ${accent}18 0%, transparent 55%)` }} />
-
-                        <div className="relative z-10">
-                          <div className="inline-flex items-center justify-center rounded-xl w-12 h-12 mb-3" style={{ background: `${accent}18`, color: accent }}>
-                            {iconByType[item.type]}
-                          </div>
-
-                          <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-neutral-500 mb-1">
-                            {item.label}
-                          </p>
-                          <p className="text-lg font-semibold break-all transition-colors" style={{ color: accent }}>
-                            {item.email}
-                          </p>
-
-                          <div className="flex flex-wrap gap-2 mt-3 mb-2">
-                            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium" style={{ background: `${accent}14`, color: accent }}>
-                              {item.responseTime}
-                            </span>
-                            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium text-neutral-600 bg-neutral-100">
-                              {item.bestFor}
-                            </span>
-                          </div>
-
-                          <p className="text-xs text-neutral-500 leading-relaxed mt-2">
-                            {item.note}
-                          </p>
-
-                          <div className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
-                            Deschide Gmail
-                            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                          </div>
-                        </div>
-                      </motion.a>
-                    );
-                  })}
-                </div>
+                      <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-neutral-500 mb-1">
+                        {item.label}
+                      </p>
+                      <p className="text-base font-semibold break-all" style={{ color: accent }}>
+                        {item.email}
+                      </p>
+                      <p className="text-xs text-neutral-600 leading-relaxed mt-2 min-h-[36px]">
+                        {item.note}
+                      </p>
+                    </motion.a>
+                  );
+                })}
               </div>
             </div>
           </motion.section>
@@ -512,14 +509,19 @@ const ContactPage: React.FC = () => {
             </h3>
             <div className="flex flex-wrap justify-center gap-5">
               {[
-                { href: `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Bună ziua! 👋\n\nV-am contactat prin pagina de Contact RightMob.\nAș dori mai multe detalii și o consultație.\n\n📅 ${new Date().toLocaleDateString('ro-RO')}  |  📱 ${/iPhone|iPad|Android/i.test(navigator.userAgent) ? 'Mobil' : 'Desktop'}\n\nVă mulțumesc!`)}`, label: 'WhatsApp', icon: 'wa', color: '#25D366', hoverBg: 'linear-gradient(135deg, #25D366, #20BA5A)' },
-                { href: `viber://chat?number=%2B${viberNumber}`, label: 'Viber', icon: 'viber', color: '#665CAC', hoverBg: 'linear-gradient(135deg, #665CAC, #59509D)' },
+                { href: `https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Bună ziua! Aș dori mai multe detalii despre produsele RightMob.')}`, label: 'WhatsApp', icon: 'wa', color: '#25D366', hoverBg: 'linear-gradient(135deg, #25D366, #20BA5A)', trackSource: 'whatsapp' },
+                { href: `viber://chat?number=%2B${viberNumber}`, label: 'Viber', icon: 'viber', color: '#665CAC', hoverBg: 'linear-gradient(135deg, #665CAC, #59509D)', trackSource: 'viber' },
                 { href: instagramUrl, label: 'Instagram', icon: 'ig', color: '#E1306C', hoverBg: 'linear-gradient(135deg, #f09433, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888)' },
                 { href: facebookUrl, label: 'Facebook', icon: 'fb', color: '#1877F2', hoverBg: 'linear-gradient(135deg, #1877F2, #0C5FCD)' },
               ].map((s) => (
                   <motion.a
                     key={s.label}
                     href={s.href}
+                    onClick={() => {
+                      if (s.trackSource) {
+                        sendTrack(s.trackSource, `Click ${s.label} din secțiunea social`);
+                      }
+                    }}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="social-icon-contact flex items-center justify-center w-16 h-16 rounded-2xl border transition-all duration-300 shadow-sm"

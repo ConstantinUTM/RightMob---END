@@ -9,6 +9,7 @@ dist-ssr
 .env.example
 *.local
 server/adminSettings.json
+server/.runtime-secrets.json
 
 # Editor directories and files
 .vscode/*

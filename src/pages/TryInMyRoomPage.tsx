@@ -62,7 +62,7 @@ const TryInMyRoomPage: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [facingMode] = useState<'environment' | 'user'>('environment');
   const [showCamera, setShowCamera] = useState(false);
   
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
@@ -245,23 +245,6 @@ const TryInMyRoomPage: React.FC = () => {
         setError('Eroare la inițializarea camerei. Încearcă să încarci o imagine.');
       }
     }
-  };
-
-  const capturePhoto = () => {
-    if (!videoRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-
-    const dataUrl = canvas.toDataURL('image/png');
-    setBackgroundImage(dataUrl);
-    enterEditMode();
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

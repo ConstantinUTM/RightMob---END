@@ -14,9 +14,30 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getAdminToken } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import AdminLoginModal from './AdminLoginModal';
 import Logo from './Logo';
+import { getApiBase } from '../lib/api';
+
+interface AdminMessageItem {
+  timestamp?: string;
+}
+
+interface AdminReviewItem {
+  review?: {
+    date?: string;
+  };
+}
+
+const LAST_SEEN_MESSAGES_KEY = 'admin:lastSeenMessagesAt';
+const LAST_SEEN_REVIEWS_KEY = 'admin:lastSeenReviewsAt';
+
+const toMillis = (value?: string): number => {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 // Helper function to get admin profile
 const getAdminProfile = () => {
@@ -37,6 +58,8 @@ const AdminLayout: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [profile, setProfile] = useState(getAdminProfile());
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [hasNewReviews, setHasNewReviews] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -50,6 +73,73 @@ const AdminLayout: React.FC = () => {
     setProfile(getAdminProfile());
     setIsMobileSidebarOpen(false);
   }, [location]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    if (location.pathname.startsWith('/admin/messages')) {
+      localStorage.setItem(LAST_SEEN_MESSAGES_KEY, new Date().toISOString());
+      setHasNewMessages(false);
+    }
+
+    if (location.pathname.startsWith('/admin/reviews')) {
+      localStorage.setItem(LAST_SEEN_REVIEWS_KEY, new Date().toISOString());
+      setHasNewReviews(false);
+    }
+  }, [location.pathname, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    let isCancelled = false;
+
+    const loadNotifications = async () => {
+      try {
+        const token = getAdminToken() || '';
+        if (!token) return;
+
+        const base = getApiBase();
+        const headers = { 'x-admin-token': token };
+
+        const [messagesRes, reviewsRes] = await Promise.all([
+          fetch(`${base}/api/admin/messages`, { headers }),
+          fetch(`${base}/api/admin/reviews`, { headers }),
+        ]);
+
+        if (isCancelled) return;
+
+        if (messagesRes.ok) {
+          const messagesData = await messagesRes.json();
+          const messages = Array.isArray(messagesData) ? (messagesData as AdminMessageItem[]) : [];
+          const latestMessageAt = messages.reduce((latest, item) => {
+            return Math.max(latest, toMillis(item.timestamp));
+          }, 0);
+          const lastSeenMessagesAt = toMillis(localStorage.getItem(LAST_SEEN_MESSAGES_KEY) || undefined);
+          setHasNewMessages(latestMessageAt > lastSeenMessagesAt);
+        }
+
+        if (reviewsRes.ok) {
+          const reviewsData = await reviewsRes.json();
+          const reviews = Array.isArray(reviewsData) ? (reviewsData as AdminReviewItem[]) : [];
+          const latestReviewAt = reviews.reduce((latest, item) => {
+            return Math.max(latest, toMillis(item.review?.date));
+          }, 0);
+          const lastSeenReviewsAt = toMillis(localStorage.getItem(LAST_SEEN_REVIEWS_KEY) || undefined);
+          setHasNewReviews(latestReviewAt > lastSeenReviewsAt);
+        }
+      } catch {
+        // Silent fail: sidebar notification should never block admin UI.
+      }
+    };
+
+    loadNotifications();
+    const interval = window.setInterval(loadNotifications, 60000);
+
+    return () => {
+      isCancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [isAdmin]);
 
   const menuItems = [
     {
@@ -77,11 +167,13 @@ const AdminLayout: React.FC = () => {
       path: '/admin/messages',
       icon: Mail,
       label: 'Mesaje',
+      hasNotification: hasNewMessages,
     },
     {
       path: '/admin/reviews',
       icon: MessageSquare,
       label: 'Recenzii',
+      hasNotification: hasNewReviews,
     },
     {
       path: '/admin/content',
@@ -206,9 +298,26 @@ const AdminLayout: React.FC = () => {
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                <div className="relative">
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {item.hasNotification && (
+                    <span
+                      className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-red-500 border border-white"
+                      aria-label={`Ai elemente noi la ${item.label}`}
+                      title={`Ai elemente noi la ${item.label}`}
+                    />
+                  )}
+                </div>
                 {showLabels && (
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium flex items-center gap-2">
+                    {item.label}
+                    {item.hasNotification && (
+                      <span
+                        className="w-2.5 h-2.5 rounded-full bg-red-500"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </span>
                 )}
               </Link>
             );

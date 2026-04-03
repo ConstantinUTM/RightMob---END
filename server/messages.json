@@ -1,32 +1,5 @@
 [
   {
-    "id": "1770673719064",
-    "fullName": "Test User",
-    "email": "test@test.com",
-    "phone": "123456789",
-    "message": "Test message",
-    "timestamp": "2026-02-09T21:48:39.064Z",
-    "read": true
-  },
-  {
-    "id": "1770843984558",
-    "fullName": "Bulai Constantin",
-    "email": "constantin.bulai21@gmail.com",
-    "phone": "060260577",
-    "message": "wq2e3wr4t5yrgfeds",
-    "timestamp": "2026-02-11T21:06:24.541Z",
-    "read": true
-  },
-  {
-    "id": "1770847628016",
-    "fullName": "Bulai Constantin",
-    "email": "constantin.bulai21@gmail.com",
-    "phone": "060260577",
-    "message": "testttte 1",
-    "timestamp": "2026-02-11T22:07:08.008Z",
-    "read": true
-  },
-  {
     "id": "1771006504971",
     "fullName": "Bulai Constantin",
     "email": "constantin.bulai21@gmail.com",
@@ -36,48 +9,380 @@
     "read": true
   },
   {
-    "id": "1771359652031",
-    "fullName": "Test",
-    "email": "constantin.bulai21@gmail.com",
-    "phone": "060260577",
-    "message": "eq3rwe4t",
-    "timestamp": "2026-02-17T20:20:52.008Z",
-    "read": true
+    "id": "1772820958505",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "Test din terminal",
+    "timestamp": "2026-03-06T18:15:58.505Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "Pagina principala",
+      "source": "email"
+    }
   },
   {
-    "id": "1772487787388",
-    "fullName": "Constantin Bulai",
-    "email": "constantin.bulai21@gmail.com",
-    "phone": "31242134",
-    "message": "cgvnklm;",
-    "timestamp": "2026-03-02T21:43:07.039Z",
-    "read": true
+    "id": "1772820981843",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/contact",
+    "timestamp": "2026-03-06T18:16:21.843Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/contact",
+      "source": "email"
+    }
   },
   {
-    "id": "1772489365085",
-    "fullName": "Constantin Bulai",
-    "email": "constantin.bulai21@gmail.com",
-    "phone": "31242134",
-    "message": "sdzfxgchbjkl;'",
-    "timestamp": "2026-03-02T22:09:25.069Z",
-    "read": true
+    "id": "1772821168354",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/contact",
+    "timestamp": "2026-03-06T18:19:28.354Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/contact",
+      "source": "email"
+    }
   },
   {
-    "id": "1772489382896",
-    "fullName": "Constantin Bulai",
-    "email": "constantin.bulai21@gmail.com",
-    "phone": "31242134",
-    "message": "cdxcfbg",
-    "timestamp": "2026-03-02T22:09:42.537Z",
-    "read": true
+    "id": "1772821800241",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "Sunt interesat de: Camera copii\nLink: http://localhost:5173/galerie/1772136109906as07v7",
+    "timestamp": "2026-03-06T18:30:00.241Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/galerie/1772136109906as07v7",
+      "source": "email"
+    }
   },
   {
-    "id": "1772489399078",
-    "fullName": "dsf",
-    "email": "constantin.bulai21@gmail.com",
-    "phone": "defrg",
-    "message": "erfgtf",
-    "timestamp": "2026-03-02T22:09:59.066Z",
-    "read": true
+    "id": "1772821818398",
+    "fullName": "WhatsApp Click",
+    "email": "",
+    "phone": "",
+    "message": "Sunt interesat de: *Camera copii*\nLink: http://localhost:5173/galerie/1772136109906as07v7",
+    "timestamp": "2026-03-06T18:30:18.398Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "Produs / Galerie",
+      "source": "whatsapp"
+    }
+  },
+  {
+    "id": "1772822268500",
+    "fullName": "WhatsApp Click",
+    "email": "",
+    "phone": "",
+    "message": "Sunt interesat de: Camera copii\nLink: http://localhost:5173/galerie/1772136109906as07v7",
+    "timestamp": "2026-03-06T18:37:48.500Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/galerie/1772136109906as07v7",
+      "source": "whatsapp"
+    }
+  },
+  {
+    "id": "1772908643845",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "Pagina principală",
+    "timestamp": "2026-03-07T18:37:23.845Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "Pagina principală",
+      "source": "email"
+    }
+  },
+  {
+    "id": "1773771811734",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/contact",
+    "timestamp": "2026-03-17T18:23:31.734Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/contact",
+      "source": "email"
+    }
+  },
+  {
+    "id": "1773772444165",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/contact",
+    "timestamp": "2026-03-17T18:34:04.165Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/contact",
+      "source": "email"
+    }
+  },
+  {
+    "id": "1773775263332",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "Am vizitat pagina de Contact",
+    "timestamp": "2026-03-17T19:21:03.332Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "Contact",
+      "source": "email"
+    }
+  },
+  {
+    "id": "1773775269449",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "Am vizitat pagina de Contact",
+    "timestamp": "2026-03-17T19:21:09.449Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "Contact",
+      "source": "email"
+    }
+  },
+  {
+    "id": "1773775986750",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "Am vizitat pagina de Contact",
+    "timestamp": "2026-03-17T19:33:06.750Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "Contact",
+      "source": "email:info@rightmob.md"
+    }
+  },
+  {
+    "id": "1773775990601",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "Am vizitat pagina de Contact",
+    "timestamp": "2026-03-17T19:33:10.601Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "Contact",
+      "source": "email:oferta@rightmob.md"
+    }
+  },
+  {
+    "id": "1773777012429",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/contact",
+    "timestamp": "2026-03-17T19:50:12.429Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/contact",
+      "source": "email:comenzi@rightmob.md"
+    }
+  },
+  {
+    "id": "1773861442321",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/",
+    "timestamp": "2026-03-18T19:17:22.321Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/",
+      "source": "email:comenzi@rightmob.md"
+    }
+  },
+  {
+    "id": "1773861446434",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/",
+    "timestamp": "2026-03-18T19:17:26.434Z",
+    "read": true,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/",
+      "source": "email:info@rightmob.md"
+    }
+  },
+  {
+    "id": "1774270065361",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/",
+    "timestamp": "2026-03-23T12:47:45.361Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/",
+      "source": "email:info@rightmob.md"
+    }
+  },
+  {
+    "id": "1774985455259",
+    "fullName": "WhatsApp Click",
+    "email": "",
+    "phone": "",
+    "message": "Pagina principală",
+    "timestamp": "2026-03-31T19:30:55.259Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "Pagina principală",
+      "source": "whatsapp"
+    }
+  },
+  {
+    "id": "1774986153712",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/",
+    "timestamp": "2026-03-31T19:42:33.712Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/",
+      "source": "email:info@rightmob.md"
+    }
+  },
+  {
+    "id": "1774986598936",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/contact",
+    "timestamp": "2026-03-31T19:49:58.936Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/contact",
+      "source": "email:info@rightmob.md"
+    }
+  },
+  {
+    "id": "1774986609249",
+    "fullName": "Email Click",
+    "email": "",
+    "phone": "",
+    "message": "/contact",
+    "timestamp": "2026-03-31T19:50:09.249Z",
+    "read": false,
+    "type": "contact-click",
+    "metadata": {
+      "device": "Desktop",
+      "city": "Chisinau",
+      "lang": "RO",
+      "page": "/contact",
+      "source": "email:comenzi@rightmob.md"
+    }
+  },
+  {
+    "id": "1774987776081",
+    "fullName": "Test User",
+    "email": "test@example.com",
+    "phone": "",
+    "departmentEmail": "",
+    "message": "Test mesaj",
+    "timestamp": "2026-03-31T23:09:34.0161689+03:00",
+    "read": false
+  },
+  {
+    "id": "1774988131770",
+    "fullName": "Test RightMob",
+    "email": "test@example.com",
+    "phone": "",
+    "departmentEmail": "",
+    "message": "Test contact recipient route",
+    "timestamp": "2026-03-31T23:15:29.7586189+03:00",
+    "read": false
   }
 ]

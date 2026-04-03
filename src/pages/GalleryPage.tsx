@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Sparkles } from 'lucide-react';
 import galleryService from '../services/galleryService';
@@ -33,14 +33,6 @@ const CARD_SPAN_PATTERN_COMPACT = [
   '',
 ] as const;
 
-const hashString = (value: string) => {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash);
-};
-
 const GalleryPage: React.FC = () => {
   const { t, language } = useLanguage();
   const [items, setItems] = useState<any[]>([]);
@@ -51,8 +43,11 @@ const GalleryPage: React.FC = () => {
   const [sortOpen, setSortOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { categoryId: routeCategoryId } = useParams<{ categoryId?: string }>();
   const params = new URLSearchParams(location.search);
-  const filterCategory = params.get('category') || '';
+  const routeFilterCategory = (routeCategoryId || '').trim().toLowerCase();
+  const queryFilterCategory = (params.get('category') || '').trim().toLowerCase();
+  const filterCategory = routeFilterCategory || queryFilterCategory;
   const base = getUploadsBase();
 
   useEffect(() => {
@@ -91,8 +86,18 @@ const GalleryPage: React.FC = () => {
   ];
 
   const setCategory = (category: string) => {
+    const normalizedCategory = (category || '').trim().toLowerCase();
+    if (routeFilterCategory) {
+      if (normalizedCategory) {
+        navigate(`/mobilier/${encodeURIComponent(normalizedCategory)}`);
+      } else {
+        navigate('/galerie');
+      }
+      return;
+    }
+
     const next = new URLSearchParams(location.search);
-    if (category) next.set('category', category);
+    if (normalizedCategory) next.set('category', normalizedCategory);
     else next.delete('category');
     navigate({ pathname: '/galerie', search: next.toString() });
   };
@@ -179,6 +184,7 @@ const GalleryPage: React.FC = () => {
     : t('gallery.sortBy');
   const categoryLabel = (catId: string) =>
     catId ? getCategoryLabel(t, catId, { ...categoryLabelsMap, ...CATEGORY_LABELS }) : t('gallery.all');
+  const isSingleItem = balancedItems.length === 1;
 
   const categories = [
     { id: '', label: t('gallery.all') },
@@ -195,8 +201,9 @@ const GalleryPage: React.FC = () => {
           {items.length > 0 && items[0].url && (
             <img
               src={toUrl(items[0].url)}
-              alt=""
+              alt={filterCategory ? `${categoryLabel(filterCategory)} - proiecte RightMob` : 'Galerie proiecte mobilier RightMob'}
               decoding="async"
+              loading="eager"
               className="w-full h-full object-cover opacity-40"
             />
           )}
@@ -311,13 +318,16 @@ const GalleryPage: React.FC = () => {
             )}
           </motion.div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 grid-flow-dense auto-rows-[160px] sm:auto-rows-[190px] md:auto-rows-[220px] lg:auto-rows-[240px]">
+          <div className={isSingleItem
+            ? 'grid grid-cols-1 place-items-center'
+            : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 grid-flow-dense auto-rows-[160px] sm:auto-rows-[190px] md:auto-rows-[220px] lg:auto-rows-[240px]'}>
             {balancedItems.map((item, idx) => (
               <GalleryCard
                 key={item.id}
                 item={item}
                 idx={idx}
                 total={balancedItems.length}
+                singleMode={isSingleItem}
                 toUrl={toUrl}
                 categoryLabel={categoryLabel}
                 language={language}
@@ -333,15 +343,16 @@ const GalleryPage: React.FC = () => {
 
 type GalleryCardProps = {
   item: any; idx: number; total: number;
+  singleMode?: boolean;
   toUrl: (u: string) => string; categoryLabel: (c: string) => string;
   language: string; t: (k: string) => string;
 };
-const GalleryCard = React.memo(({ item, idx, total, toUrl, categoryLabel, language, t }: GalleryCardProps) => {
+const GalleryCard = React.memo(({ item, idx, total, singleMode = false, toUrl, categoryLabel, language, t }: GalleryCardProps) => {
 
   const url = toUrl(item.url || '');
-  const compactMode = total <= 8;
+  const compactMode = total <= 8 && !singleMode;
   const pattern = compactMode ? CARD_SPAN_PATTERN_COMPACT : CARD_SPAN_PATTERN;
-  const spanClass = pattern[idx % pattern.length];
+  const spanClass = singleMode ? '' : pattern[idx % pattern.length];
 
   let tailFillClass = '';
   const isLast = idx === total - 1;
@@ -365,7 +376,7 @@ const GalleryCard = React.memo(({ item, idx, total, toUrl, categoryLabel, langua
 
   return (
     <article
-      className={`h-full rounded-2xl overflow-hidden bg-neutral-900 shadow-md transition-all duration-300 hover:shadow-[0_18px_45px_rgba(220,38,38,0.24)] hover:-translate-y-0.5 ${spanClass} ${tailFillClass}`}
+      className={`${singleMode ? 'w-full max-w-[820px] aspect-[4/5] sm:aspect-[5/4] md:aspect-[4/3]' : 'h-full'} rounded-2xl overflow-hidden bg-neutral-900 shadow-md transition-all duration-300 hover:shadow-[0_18px_45px_rgba(220,38,38,0.24)] hover:-translate-y-0.5 ${spanClass} ${tailFillClass}`}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '360px' }}
     >
       <Link

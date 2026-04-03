@@ -42,7 +42,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ currentLabel, categoryId, cat
 
   if (categoryId && labels[categoryId]) {
     segments.push({
-      path: `/galerie?category=${categoryId}`,
+      path: `/mobilier/${encodeURIComponent(categoryId)}`,
       label: labels[categoryId],
     });
   }

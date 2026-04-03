@@ -5,9 +5,18 @@ import categoriesService, { type Category } from '../services/categoriesService'
 import { getAdminToken, useAuth } from '../contexts/AuthContext';
 import { getAllDetailFields, detailsFromMap } from '../lib/categoryDetailFields';
 import { translateBatch } from '../lib/translationService';
-import { Upload, ImagePlus, Trash2, Loader2, Languages } from 'lucide-react';
+import { Upload, ImagePlus, Loader2, Languages } from 'lucide-react';
 
 const ACCENT = '#374151';
+
+const safeTranslated = (source: string, translated?: string) => {
+  const src = (source || '').trim();
+  const tr = (translated || '').trim();
+  if (!tr) return src;
+  if (src.length >= 3 && tr.length <= 1) return src;
+  if (src.length >= 6 && tr.length <= Math.max(1, Math.floor(src.length * 0.2))) return src;
+  return tr;
+};
 
 const AdminGalleryAddPage: React.FC = () => {
   const [mainFile, setMainFile] = useState<File | null>(null);
@@ -55,6 +64,8 @@ const AdminGalleryAddPage: React.FC = () => {
     { value: '', label: '— Selectează categorie —' },
     ...categoryList.map((c) => ({ value: c.id, label: c.label })),
   ];
+  const mainImageMissing = !mainFile;
+  const categoryMissing = !category;
 
   const onUpload = async () => {
     if (!isAdmin) return alert('Autentifică-te ca admin.');
@@ -85,16 +96,16 @@ const AdminGalleryAddPage: React.FC = () => {
         let results: Record<string, string> = {};
         if (items.length > 0) {
           results = await translateBatch(items);
-          aboutEn = results['about_en'] || '';
-          aboutRu = results['about_ru'] || '';
+          aboutEn = safeTranslated(aboutRo, results['about_en']);
+          aboutRu = safeTranslated(aboutRo, results['about_ru']);
         }
         detailRows.forEach((d, i) => {
           const textRo = (d.text || '').trim();
           detailsWithTranslations.push({
             title: d.title,
             text: textRo,
-            text_en: textRo ? (results[`d${i}_en`] || undefined) : undefined,
-            text_ru: textRo ? (results[`d${i}_ru`] || undefined) : undefined,
+            text_en: textRo ? safeTranslated(textRo, results[`d${i}_en`]) : undefined,
+            text_ru: textRo ? safeTranslated(textRo, results[`d${i}_ru`]) : undefined,
             images: [],
           });
         });
@@ -199,9 +210,12 @@ const AdminGalleryAddPage: React.FC = () => {
           <h2 className="font-semibold text-neutral-900 mb-4 flex items-center gap-2"><ImagePlus className="w-5 h-5" /> Imagine și informații</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Imagine principală *</label>
-              <input type="file" accept="image/*" onChange={(e) => setMainFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
+              <label className={`block text-sm font-medium mb-1 ${mainImageMissing ? 'text-red-600' : 'text-neutral-700'}`}>Imagine principală *</label>
+              <div className={`rounded-lg border px-3 py-2 ${mainImageMissing ? 'border-red-300 bg-red-50/40' : 'border-neutral-200'}`}>
+                <input type="file" accept="image/*" onChange={(e) => setMainFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
+              </div>
               {mainFile && <p className="mt-1 text-sm text-neutral-500">{mainFile.name}</p>}
+              {mainImageMissing && <p className="mt-1 text-xs text-red-600">Câmp obligatoriu.</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">Titlu produs</label>
@@ -216,14 +230,15 @@ const AdminGalleryAddPage: React.FC = () => {
               <input type="text" value={project} onChange={(e) => setProject(e.target.value)} className="w-full p-3 border border-neutral-200 rounded-lg" placeholder="Ex: Rezidență 2024" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Categorie *</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 border border-neutral-200 rounded-lg" disabled={categoriesLoading}>
+              <label className={`block text-sm font-medium mb-1 ${categoryMissing ? 'text-red-600' : 'text-neutral-700'}`}>Categorie *</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className={`w-full p-3 border rounded-lg ${categoryMissing ? 'border-red-300 bg-red-50/40' : 'border-neutral-200'}`} disabled={categoriesLoading}>
                 {categoryOptions.map((c) => <option key={c.value || 'empty'} value={c.value}>{c.label}</option>)}
               </select>
+              {categoryMissing && <p className="mt-1 text-xs text-red-600">Câmp obligatoriu.</p>}
             </div>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} className="rounded border-neutral-300" />
-              <span className="text-sm text-neutral-700">Evidențiat în categorie</span>
+              <span className="text-sm text-neutral-700">Evidențiat în categorie (maxim 6/categorie)</span>
             </label>
           </div>
         </div>
