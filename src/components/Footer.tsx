@@ -7,11 +7,11 @@ import Logo from './Logo';
 
 const Footer: React.FC = () => {
   const { t } = useLanguage();
-  const phoneNumber = import.meta.env.VITE_COMPANY_PHONE || '+373 XX XX XX XX';
+  const phoneNumber = import.meta.env.VITE_COMPANY_PHONE || '+373 78 68 53 63';
   const email = import.meta.env.VITE_COMPANY_EMAIL || 'contact@rightmob.md';
   const address = import.meta.env.VITE_COMPANY_ADDRESS || 'Chișinău, Moldova';
   const schedule = import.meta.env.VITE_COMPANY_SCHEDULE || 'Lu - Sâm: 09:00 - 18:00';
-  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '373XXXXXXXX';
+  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '37378685363';
   const instagramUrl = import.meta.env.VITE_INSTAGRAM_URL || 'https://instagram.com/rightmob';
   const facebookUrl = import.meta.env.VITE_FACEBOOK_URL || 'https://facebook.com/rightmob';
   const addressForMap = (() => {
@@ -174,7 +174,7 @@ const Footer: React.FC = () => {
 
               {/* Viber */}
               <a
-                href={`viber://chat?number=%2B${import.meta.env.VITE_VIBER_NUMBER || '373XXXXXXXX'}`}
+                href={`viber://chat?number=%2B${import.meta.env.VITE_VIBER_NUMBER || '37378685363'}`}
                 onClick={() => sendTrack('viber')}
                 target="_blank"
                 rel="noopener noreferrer"

@@ -69,7 +69,7 @@ const ContactPage: React.FC = () => {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [phoneError, setPhoneError] = useState('');
 
-  const phoneNumber = import.meta.env.VITE_COMPANY_PHONE || '+373 XX XX XX XX';
+  const phoneNumber = import.meta.env.VITE_COMPANY_PHONE || '+373 78 68 53 63';
   const email = import.meta.env.VITE_COMPANY_EMAIL || 'contact@rightmob.md';
   const address = import.meta.env.VITE_COMPANY_ADDRESS || 'Ismail 33, Chișinău';
   const schedule = import.meta.env.VITE_COMPANY_SCHEDULE || 'Lu - Sâm: 09:00 - 18:00';
@@ -83,8 +83,8 @@ const ContactPage: React.FC = () => {
     || (mapsPlaceId
       ? `https://maps.google.com/maps?output=embed&q=place_id:${encodeURIComponent(mapsPlaceId)}`
       : `https://maps.google.com/maps?output=embed&q=${encodeURIComponent(addressForMap)}`);
-  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '373XXXXXXXX';
-  const viberNumber = import.meta.env.VITE_VIBER_NUMBER || '373XXXXXXXX';
+  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '37378685363';
+  const viberNumber = import.meta.env.VITE_VIBER_NUMBER || '37378685363';
   const instagramUrl = import.meta.env.VITE_INSTAGRAM_URL || 'https://instagram.com/rightmob';
   const facebookUrl = import.meta.env.VITE_FACEBOOK_URL || 'https://facebook.com/rightmob';
 

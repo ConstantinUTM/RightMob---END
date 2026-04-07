@@ -57,8 +57,8 @@ const Header: React.FC = () => {
       : `font-medium transition-colors duration-200 ${active ? 'text-[#2563eb]' : 'text-white/85 hover:text-white'}`;
   };
 
-  const phone = import.meta.env.VITE_COMPANY_PHONE || '';
-  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '373XXXXXXXX';
+  const phone = import.meta.env.VITE_COMPANY_PHONE || '+373 78 68 53 63';
+  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '37378685363';
 
   const getHeaderContext = () => {
     const path = location.pathname;

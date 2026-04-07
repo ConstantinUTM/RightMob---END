@@ -84,8 +84,8 @@ function buildMessage(format: 'whatsapp' | 'viber' | 'email'): string {
 const FloatingButtons: React.FC = () => {
   const [emailMenuOpen, setEmailMenuOpen] = useState(false);
   const emailMenuRef = useRef<HTMLDivElement | null>(null);
-  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '373XXXXXXXX';
-  const viberNumber = import.meta.env.VITE_VIBER_NUMBER || '373XXXXXXXX';
+  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '37378685363';
+  const viberNumber = import.meta.env.VITE_VIBER_NUMBER || '37378685363';
   const emailTargets = [
     {
       label: 'Info',
