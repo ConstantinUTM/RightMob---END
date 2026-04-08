@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Try in My Room - LuxMobila</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <button class="back-btn" onclick="window.location.href='/'">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <h1 class="title">Try in My Room</h1>
+                <button class="help-btn" id="helpBtn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Camera/Upload Section -->
+            <div class="camera-section" id="cameraSection">
+                <div class="camera-container">
+                    <video id="videoElement" autoplay playsinline muted></video>
+                    <canvas id="canvas"></canvas>
+                    
+                    <!-- Loading State -->
+                    <div class="loading-state" id="loadingState">
+                        <div class="spinner"></div>
+                        <p>Se încarcă camera...</p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div class="error-state" id="errorState" style="display: none;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="15" y1="9" x2="9" y2="15"/>
+                            <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                        <p id="errorMessage">Camera nu este disponibilă</p>
+                    </div>
+                </div>
+
+                <!-- Camera Controls -->
+                <div class="camera-controls">
+                    <button class="control-btn upload-btn" id="uploadBtn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        <span>Încarcă imagine</span>
+                    </button>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    
+                    <button class="control-btn capture-btn" id="captureBtn">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        <span>Fă poză</span>
+                    </button>
+
+                    <button class="control-btn switch-btn" id="switchBtn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 2l4 4-4 4"/>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                            <path d="M7 22l-4-4 4-4"/>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                        </svg>
+                        <span>Comută</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Edit Controls (hidden initially) -->
+            <div class="edit-controls" id="editControls" style="display: none;">
+                <div class="edit-controls-left">
+                    <button class="edit-btn" id="retakeBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"/>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                        </svg>
+                        Refă
+                    </button>
+                    <button class="edit-btn" id="deleteBtn" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        Șterge
+                    </button>
+                </div>
+                <div class="edit-controls-center">
+                    <button class="edit-btn" id="sendBackwardBtn" disabled title="Send Backward">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="18 15 12 9 6 15"/>
+                        </svg>
+                    </button>
+                    <button class="edit-btn" id="bringForwardBtn" disabled title="Bring Forward">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <button class="edit-btn" id="resetTransformBtn" disabled title="Reset Transform">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                            <path d="M21 3v5h-5"/>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                            <path d="M3 21v-5h5"/>
+                        </svg>
+                    </button>
+                </div>
+                <button class="edit-btn primary" id="exportBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Export
+                </button>
+            </div>
+        </main>
+
+        <!-- Products Drawer -->
+        <div class="drawer" id="drawer">
+            <div class="drawer-handle"></div>
+            <div class="drawer-header">
+                <h2>Adaugă mobilă</h2>
+                <input type="text" class="search-input" id="searchInput" placeholder="Caută produse...">
+            </div>
+            <div class="drawer-content" id="drawerContent">
+                <div class="products-loading">
+                    <div class="spinner"></div>
+                    <p>Se încarcă produsele...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Touch Overlay (for pinch/pan on mobile) -->
+        <div class="touch-overlay" id="touchOverlay" style="display: none;"></div>
+
+        <!-- Help Modal -->
+        <div class="modal" id="helpModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Cum folosești Try in My Room</h3>
+                    <button class="modal-close" id="closeHelp">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="help-item">
+                        <span class="help-number">1</span>
+                        <div>
+                            <h4>Fă o poză camerei</h4>
+                            <p>Folosește camera sau încarcă o imagine existentă</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-number">2</span>
+                        <div>
+                            <h4>Adaugă mobilă</h4>
+                            <p>Selectează produse din drawer-ul de jos</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-number">3</span>
+                        <div>
+                            <h4>Aranjează mobila</h4>
+                            <p><strong>Selecție:</strong> Click/tap pe produs pentru a-l selecta și a vedea handle-urile de transformare</p>
+                            <p><strong>Mutare:</strong> Drag interior pentru a muta</p>
+                            <p><strong>Redimensionare:</strong> Drag pe handle-urile albe (colțuri și laturi)</p>
+                            <p><strong>Rotire:</strong> Drag pe handle-ul verde (sus) sau Shift+Scroll (desktop)</p>
+                            <p><strong>Mobile:</strong> Pinch cu 2 degete pentru zoom și rotire</p>
+                            <p><strong>Ordine:</strong> Folosește butoanele ↑/↓ pentru a schimba ordinea straturilor</p>
+                        </div>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-number">4</span>
+                        <div>
+                            <h4>Exportă rezultatul</h4>
+                            <p>Apasă butonul Export pentru a descărca imaginea</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

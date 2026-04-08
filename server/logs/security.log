@@ -1,0 +1,73 @@
+{"ts":"2026-03-06T20:26:28.235Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-07T18:43:16.363Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-10T22:11:34.335Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-11T18:22:47.111Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-11T19:30:55.624Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-11T19:32:47.271Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-11T22:22:32.438Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-11T22:40:48.889Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-11T22:51:53.132Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-12T18:47:53.450Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-12T19:08:41.339Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-12T19:08:53.602Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-12T19:09:32.512Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-12T19:09:47.902Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-12T19:12:57.715Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-16T19:22:21.029Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-16T19:23:05.090Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-16T19:23:26.901Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-16T19:23:37.363Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-16T19:25:19.727Z","event":"rate_limit_password_reset","ip":"127.0.0.1","message":"Prea multe cereri reset parolă"}
+{"ts":"2026-03-16T19:26:57.809Z","event":"rate_limit_password_reset","ip":"127.0.0.1","message":"Prea multe cereri reset parolă"}
+{"ts":"2026-03-16T19:56:43.525Z","event":"password_reset_request_ignored","ip":"127.0.0.1","email":"constantin.bulai21@gmail.com"}
+{"ts":"2026-03-16T19:58:03.551Z","event":"password_reset_dev_link","ip":"127.0.0.1","email":"rightstep212@gmail.com","message":"SMTP lipsă, link returnat în răspuns (dev)"}
+{"ts":"2026-03-16T19:58:50.020Z","event":"password_reset_dev_link","ip":"127.0.0.1","email":"rightstep212@gmail.com","message":"SMTP lipsă, link returnat în răspuns (dev)"}
+{"ts":"2026-03-16T19:59:21.795Z","event":"password_reset_completed","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-16T19:59:29.340Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-16T19:59:31.941Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-16T20:10:16.841Z","event":"rate_limit_password_reset","ip":"127.0.0.1","message":"Prea multe cereri reset parolă"}
+{"ts":"2026-03-16T20:10:22.248Z","event":"rate_limit_password_reset","ip":"127.0.0.1","message":"Prea multe cereri reset parolă"}
+{"ts":"2026-03-17T18:12:57.043Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-17T18:13:02.668Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-17T18:13:29.907Z","event":"password_changed","ip":"127.0.0.1","message":"Parolă actualizată"}
+{"ts":"2026-03-17T20:36:25.826Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-17T20:37:59.869Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-18T19:56:05.904Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-19T17:11:36.984Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-23T12:47:16.268Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-23T12:47:58.568Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-23T12:54:21.390Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-23T18:54:17.127Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-23T19:15:24.196Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-24T18:23:12.879Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-24T19:03:42.568Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-24T19:03:49.498Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-25T06:34:59.425Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-25T06:58:33.676Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-27T15:10:58.470Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-27T19:49:41.964Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-30T19:06:12.359Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:10:08.589Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:10:27.795Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:10:59.422Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:12:54.343Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:24:05.036Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:29:38.731Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:31:35.250Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:31:48.792Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:32:07.737Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:33:56.480Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T17:35:40.874Z","event":"rate_limit_login","ip":"127.0.0.1","message":"Prea multe încercări login"}
+{"ts":"2026-03-31T17:41:24.638Z","event":"rate_limit_login","ip":"127.0.0.1","message":"Prea multe încercări login"}
+{"ts":"2026-03-31T17:42:19.169Z","event":"rate_limit_login","ip":"127.0.0.1","message":"Prea multe încercări login"}
+{"ts":"2026-03-31T17:50:09.721Z","event":"login_fail","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T18:12:15.958Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T18:22:37.192Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T19:00:38.749Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T19:10:44.303Z","event":"logout","ip":"127.0.0.1"}
+{"ts":"2026-03-31T19:10:53.121Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-03-31T19:29:24.016Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-04-03T15:49:16.538Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-04-03T16:03:50.436Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-04-07T17:46:10.789Z","event":"login_ok","ip":"127.0.0.1","email":"rightstep212@gmail.com"}
+{"ts":"2026-04-07T17:51:37.079Z","event":"logout","ip":"127.0.0.1"}
